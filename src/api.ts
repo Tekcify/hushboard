@@ -34,6 +34,18 @@ export interface SystemState {
   keyboards: Keyboard[];
 }
 
+export interface UpdateInfo {
+  version: string;
+  currentVersion: string;
+  notes: string | null;
+}
+
+// Browser preview: ?update=1 shows the update card.
+const simUpdate: UpdateInfo | null =
+  typeof location !== "undefined" && new URLSearchParams(location.search).has("update")
+    ? { version: "0.1.0-beta.2", currentVersion: "0.1.0-beta.1", notes: "Fixes and improvements." }
+    : null;
+
 export interface Keyboard {
   id: string;
   name: string;
@@ -228,6 +240,29 @@ export const api = {
     inTauri ? on<{ x: number } | null>("panel-caret", cb) : () => {},
 
   quit: (): Promise<void> => (inTauri ? call("quit_app") : Promise.resolve()),
+
+  /** The app's version, e.g. "0.1.0-beta.1". */
+  version: async (): Promise<string> => {
+    if (!inTauri) return "0.1.0-beta.1";
+    const { getVersion } = await import("@tauri-apps/api/app");
+    return getVersion();
+  },
+
+  /** Look for a newer release now. Resolves to null when up to date. */
+  checkForUpdate: (): Promise<UpdateInfo | null> =>
+    inTauri ? call("check_for_update") : Promise.resolve(simUpdate),
+
+  /** Download, install and restart. Refused while the keyboard is locked. */
+  installUpdate: (): Promise<void> => (inTauri ? call("install_update") : Promise.resolve()),
+
+  /** Fires when the background check (shortly after launch, then every 6 h) finds an update. */
+  onUpdateAvailable: async (cb: (u: UpdateInfo) => void): Promise<() => void> =>
+    inTauri ? on<UpdateInfo>("update-available", cb) : () => {},
+
+  getAutostart: (): Promise<boolean> => (inTauri ? call("get_autostart") : Promise.resolve(false)),
+
+  setAutostart: (enabled: boolean): Promise<boolean> =>
+    inTauri ? call("set_autostart", { enabled }) : Promise.resolve(enabled),
 
   onState: async (cb: (s: LockState) => void): Promise<() => void> =>
     inTauri ? on<LockState>("lock-state", cb) : sim.onState(cb),
