@@ -6,6 +6,7 @@
 //! button or Ctrl + Alt + U) → Idle.
 
 mod shell;
+mod updates;
 
 use serde::Serialize;
 use shell::IslandState;
@@ -506,6 +507,11 @@ fn quit_app(app: AppHandle) {
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec![updates::AUTOSTART_ARG]),
+        ))
         .manage(AppState(Mutex::new(Inner {
             phase: Phase::Idle,
             generation: 0,
@@ -524,8 +530,12 @@ pub fn run() {
             shell::init_platform(app);
             shell::create_main_window(app.handle())?;
             shell::create_tray(app.handle())?;
-            // Open the panel once at launch so it's clear where Hushboard lives.
-            shell::show_panel(app.handle());
+            // Open the panel at launch so it's clear where Hushboard lives, except when it was
+            // started at login, where it should stay quietly in the menu bar or tray.
+            if !updates::launched_at_login() {
+                shell::show_panel(app.handle());
+            }
+            updates::spawn_checker(app.handle().clone());
             spawn_system_watcher(app.handle().clone());
             Ok(())
         })
@@ -544,7 +554,11 @@ pub fn run() {
             set_prefs,
             fit_panel,
             hide_panel,
-            quit_app
+            quit_app,
+            updates::check_for_update,
+            updates::install_update,
+            updates::get_autostart,
+            updates::set_autostart
         ])
         .run(tauri::generate_context!())
         .expect("error while running Hushboard");

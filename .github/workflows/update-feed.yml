@@ -1,0 +1,41 @@
+# When a release is published, copy its latest.json to the rolling "updater" release. The app's
+# updater reads https://github.com/tekcify/hushboard/releases/download/updater/latest.json, which
+# works for betas too (GitHub's /releases/latest/ skips pre-releases) and only ever points at
+# releases a maintainer has published, never at a draft.
+name: Update feed
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release whose latest.json should become the update feed
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  feed:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      TAG: ${{ github.event.inputs.tag || github.event.release.tag_name }}
+    steps:
+      - name: Skip the feed release itself
+        if: env.TAG == 'updater'
+        run: echo "Nothing to do for the feed release." && exit 0
+
+      - name: Publish latest.json to the updater release
+        if: env.TAG != 'updater'
+        run: |
+          gh release download "$TAG" --repo "$REPO" --pattern latest.json
+          if ! gh release view updater --repo "$REPO" >/dev/null 2>&1; then
+            gh release create updater --repo "$REPO" --prerelease \
+              --title "Update feed (used by the app)" \
+              --notes "Holds latest.json for Hushboard's in-app updater. Downloads are on the versioned releases."
+          fi
+          gh release upload updater latest.json --repo "$REPO" --clobber
+          echo "Update feed now points at $TAG:" && cat latest.json

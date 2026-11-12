@@ -4,7 +4,7 @@
 
 Hushboard is a small, open-source desktop app for **macOS, Windows and Linux**, built with [Tauri](https://tauri.app) (Rust + web UI).
 
-> **Status:** early (0.1). It works on macOS and is being tested on Windows and Linux. There are no signed release builds yet: build it from source (below).
+> **Status:** beta. **[Download the latest release](https://github.com/tekcify/hushboard/releases)** for macOS, Windows or Linux, then follow [Installing Hushboard](docs/installing.md). Beta builds aren't signed by Apple or Microsoft yet, so your system warns you on first launch; the guide shows how to get past that. Hushboard updates itself once installed.
 
 ## What it does
 
@@ -66,7 +66,7 @@ Release build: `npm run tauri build`. To work on the UI in a browser with a simu
 | `src-tauri/src/shell.rs` | Tray icon and menu, the tray panel, the island windows. |
 | `src/` | The web UI: `main.ts` (panel/window), `island.ts`, `overlay.ts` (full-screen view), `tokens.ts` (design tokens to CSS). |
 | `design-system/` | Hushboard's design system: tokens, component CSS and guidelines, and the icons (Hugeicons). |
-| `docs/` | [Dev signing](docs/dev-signing.md). |
+| `docs/` | [Installing](docs/installing.md), [releasing](docs/releasing.md), [dev signing](docs/dev-signing.md). |
 
 ## Safety rules
 

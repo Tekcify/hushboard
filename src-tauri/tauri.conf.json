@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Hushboard",
-  "version": "0.1.0",
+  "version": "../package.json",
   "identifier": "app.hushboard.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -18,9 +18,15 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["app", "dmg", "nsis", "appimage", "deb", "rpm"],
+    "createUpdaterArtifacts": true,
+    "publisher": "Tekcify",
+    "copyright": "© 2026 Tekcify and the Hushboard contributors. MIT License.",
+    "homepage": "https://github.com/tekcify/hushboard",
+    "license": "MIT",
     "category": "Utility",
     "shortDescription": "Lock the keyboard while you clean it.",
+    "longDescription": "Hushboard locks your keyboard for a set time so you can wipe it clean without typing into whatever is open. The mouse and trackpad keep working, and you can always unlock by holding the on-screen button or pressing Ctrl + Alt + U.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -29,7 +35,33 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "minimumSystemVersion": "11.0"
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": "-",
+      "dmg": {
+        "windowSize": { "width": 600, "height": 380 }
+      }
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false
+      },
+      "webviewInstallMode": { "type": "downloadBootstrapper" }
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libayatana-appindicator3-1"]
+      },
+      "rpm": {
+        "depends": ["libayatana-appindicator-gtk3"]
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ0MDU1RjkzRjMxMjBEQUYKUldTdkRSTHprMThGMU05U3U2RkRlNkR2bXRYcEhRMkV5akJOWmdJQXBiTDNva1VnUnVtTDM3cHMK",
+      "endpoints": ["https://github.com/tekcify/hushboard/releases/download/updater/latest.json"],
+      "windows": { "installMode": "passive" }
     }
   }
 }
