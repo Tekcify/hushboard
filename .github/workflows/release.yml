@@ -1,0 +1,112 @@
+# Builds installers for every platform when a version tag is pushed (v0.1.0, v0.2.0-beta.1…)
+# and attaches them to a DRAFT GitHub Release. A maintainer reviews the draft and publishes it;
+# publishing triggers update-feed.yml, which points the in-app updater at it.
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   TAURI_SIGNING_PRIVATE_KEY           the update-signing key (docs/releasing.md)
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  its password ("" if none)
+# Later, for signed builds: Apple (APPLE_CERTIFICATE, APPLE_ID, …) and Windows signing secrets.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build (e.g. v0.1.0-beta.1)
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS (universal)
+            os: macos-latest
+            args: --target universal-apple-darwin
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+          - name: Windows
+            os: windows-latest
+            args: ""
+            rust_targets: ""
+          - name: Linux
+            os: ubuntu-22.04
+            args: ""
+            rust_targets: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Linux system libraries for Tauri
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: npm ci
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ env.TAG }}
+          releaseName: Hushboard ${{ env.TAG }}
+          releaseDraft: true
+          prerelease: ${{ contains(env.TAG, '-') }}
+          includeUpdaterJson: true
+          args: ${{ matrix.args }}
+          releaseBody: |
+            **Beta builds aren't signed by Apple or Microsoft yet**, so your system warns you the first time you open Hushboard. That's expected. Step-by-step instructions: [Installing Hushboard](https://github.com/tekcify/hushboard/blob/main/docs/installing.md).
+
+            | Download | For |
+            | --- | --- |
+            | `Hushboard_*_universal.dmg` | macOS 11+ (Apple Silicon and Intel) |
+            | `Hushboard_*_x64-setup.exe` | Windows 10 and 11 |
+            | `Hushboard_*_amd64.AppImage` | Any Linux (x86-64) |
+            | `Hushboard_*_amd64.deb` | Ubuntu, Debian, Mint, Pop!_OS |
+            | `Hushboard-*.x86_64.rpm` | Fedora, openSUSE, RHEL |
+
+            Check your download against `SHA256SUMS.txt`. Once installed, Hushboard updates itself.
+
+            See the [changelog](https://github.com/tekcify/hushboard/blob/main/CHANGELOG.md) for what's new.
+
+  checksums:
+    name: Checksums
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add SHA256SUMS.txt to the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          mkdir assets && cd assets
+          gh release download "$TAG" --repo "$REPO" --pattern '*'
+          rm -f SHA256SUMS.txt
+          sha256sum -- * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release upload "$TAG" SHA256SUMS.txt --repo "$REPO" --clobber

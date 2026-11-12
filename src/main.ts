@@ -1,5 +1,5 @@
 import "./styles";
-import { api, escapeKeys, type Keyboard, type LockState, type Permissions, type SystemState } from "./api";
+import { api, escapeKeys, type Keyboard, type LockState, type Permissions, type SystemState, type UpdateInfo } from "./api";
 import { icon, type IconName } from "./icons";
 import { loadSettings, saveSettings, type Settings } from "./settings";
 import { timingMs } from "./tokens";
@@ -157,21 +157,129 @@ const SETTINGS_ROWS: { key: "coverScreen" | "showKeys"; label: string; icon: Ico
   { key: "showKeys", label: "Show keys I press while locked", icon: "keyboard" },
 ];
 
+/** Start at login is the OS's setting, not ours: read and written through the app. */
+let autostart = false;
+
 function renderSettings() {
-  $("settings").innerHTML = SETTINGS_ROWS.map(
-    (r) => `<label class="app__setting" for="set-${r.key}">${icon(r.icon)}<span>${r.label}</span>
-      <button class="hb-switch" id="set-${r.key}" type="button" role="switch" aria-checked="${settings[r.key]}" data-key="${r.key}"></button></label>`,
-  ).join("");
+  const row = (key: string, label: string, name: IconName, on: boolean) =>
+    `<label class="app__setting" for="set-${key}">${icon(name)}<span>${label}</span>
+      <button class="hb-switch" id="set-${key}" type="button" role="switch" aria-checked="${on}" data-key="${key}"></button></label>`;
+  $("settings").innerHTML =
+    SETTINGS_ROWS.map((r) => row(r.key, r.label, r.icon, settings[r.key])).join("") +
+    row("autostart", "Start Hushboard at login", "login-03", autostart);
 }
 
-$("settings").addEventListener("click", (e) => {
+$("settings").addEventListener("click", async (e) => {
   const sw = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-key]");
   if (!sw) return;
+  if (sw.dataset.key === "autostart") {
+    autostart = await api.setAutostart(!autostart).catch(() => autostart);
+    sw.setAttribute("aria-checked", String(autostart));
+    return;
+  }
   const key = sw.dataset.key as "coverScreen" | "showKeys";
   settings[key] = !settings[key];
   persist();
   sw.setAttribute("aria-checked", String(settings[key]));
 });
+
+// ---------- First-run welcome ----------
+const WELCOMED_KEY = "hushboard.welcomed.v1";
+
+function welcomed(): boolean {
+  try {
+    return localStorage.getItem(WELCOMED_KEY) === "1";
+  } catch {
+    return true; // no storage: don't nag on every launch
+  }
+}
+
+function renderWelcome(platform: string) {
+  const box = $("welcome");
+  if (welcomed()) {
+    box.hidden = true;
+    return;
+  }
+  const where =
+    platform === "macos"
+      ? "Hushboard lives in your menu bar: click the keyboard icon to open this panel, or right-click it for quick locks."
+      : platform === "windows"
+        ? "Hushboard lives in the system tray (you may need the ^ arrow to see it): click the keyboard icon to open this panel, right-click for quick locks."
+        : "Hushboard adds an icon to your panel with quick locks, and keeps this window for everything else.";
+  box.innerHTML = `
+    <span class="hb-perm__icon">${icon("sparkles")}</span>
+    <div class="hb-perm__body">
+      <div class="hb-perm__title" id="welcome-title">Welcome to Hushboard</div>
+      <p class="hb-perm__text">${where} Pick how long to lock, press Lock keyboard, and wipe away. Hold the on-screen button or press ${escapeKeys(platform).join(platform === "macos" ? "" : " + ")} to unlock early.</p>
+      <div class="hb-row">
+        <button class="hb-btn hb-btn--primary" type="button" id="welcome-autostart">Start at login</button>
+        <button class="hb-btn hb-btn--ghost" type="button" id="welcome-done">Got it</button>
+      </div>
+    </div>`;
+  box.hidden = false;
+  const done = () => {
+    try {
+      localStorage.setItem(WELCOMED_KEY, "1");
+    } catch {
+      /* storage unavailable */
+    }
+    box.hidden = true;
+  };
+  $("welcome-done").addEventListener("click", done);
+  $("welcome-autostart").addEventListener("click", async () => {
+    autostart = await api.setAutostart(true).catch(() => autostart);
+    renderSettings();
+    done();
+  });
+}
+
+// ---------- Updates ----------
+function renderUpdate(update: UpdateInfo | null, message?: string) {
+  const box = $("update");
+  if (!update && !message) {
+    box.hidden = true;
+    return;
+  }
+  box.innerHTML = update
+    ? `<span class="hb-perm__icon">${icon("circle-arrow-reload-01")}</span>
+      <div class="hb-perm__body">
+        <div class="hb-perm__title">Update available <span class="hb-pill hb-pill--locked">${escapeHtml(update.version)}</span></div>
+        <p class="hb-perm__text">${update.notes ? escapeHtml(update.notes.split("\n")[0]) : `You have ${escapeHtml(update.currentVersion)}.`}</p>
+        <div class="hb-row">
+          <button class="hb-btn hb-btn--primary" type="button" id="update-install">Install and restart</button>
+          <button class="hb-btn hb-btn--ghost" type="button" id="update-later">Later</button>
+        </div>
+      </div>`
+    : `<span class="hb-perm__icon">${icon("tick-02")}</span>
+      <div class="hb-perm__body"><p class="hb-perm__text">${escapeHtml(message!)}</p></div>`;
+  box.hidden = false;
+  if (update) {
+    $("update-later").addEventListener("click", () => (box.hidden = true));
+    $<HTMLButtonElement>("update-install").addEventListener("click", async (e) => {
+      const b = e.currentTarget as HTMLButtonElement;
+      b.disabled = true;
+      b.textContent = "Installing…";
+      try {
+        await api.installUpdate(); // restarts the app on success
+      } catch (err) {
+        state = { ...state, error: String(err) };
+        renderError();
+        renderUpdate(update);
+      }
+    });
+  } else {
+    window.setTimeout(() => (box.hidden = true), 4000);
+  }
+}
+
+async function checkForUpdatesNow() {
+  try {
+    const update = await api.checkForUpdate();
+    renderUpdate(update, update ? undefined : "Hushboard is up to date.");
+  } catch (err) {
+    renderUpdate(null, `Couldn't check for updates: ${String(err)}`);
+  }
+}
 
 // ---------- Permissions ----------
 function permissionCards(p: Permissions): string {
@@ -402,11 +510,12 @@ function renderFooter() {
           ? `<p class="caption">Starts after ${ARM_DELAY_MS / 1000} s · ${escapeHtml(escape)} always unlocks</p>`
           : `<p class="caption app__why" id="lock-why">${escapeHtml(blocked)}</p>`
       }
-      <div class="app__panel-links">
-        <span></span>
-        <button class="hb-btn hb-btn--ghost" type="button" id="quit">Quit Hushboard</button>
+      <div class="app__links">
+        <button class="hb-btn hb-btn--ghost" type="button" id="check-updates">v${escapeHtml(appVersion)} · Check for updates</button>
+        <button class="hb-btn hb-btn--ghost app__quit" type="button" id="quit">Quit Hushboard</button>
       </div>`;
     $("lock").addEventListener("click", startLock);
+    $("check-updates").addEventListener("click", checkForUpdatesNow);
     $("quit").addEventListener("click", () => api.quit());
   }
   footerPhase = state.phase;
@@ -442,15 +551,20 @@ function render() {
 }
 
 // ---------- Boot ----------
+let appVersion = "";
+
 async function boot() {
   $("brand").insertAdjacentHTML("afterbegin", icon("brush-cleaning"));
+  [appVersion, autostart] = await Promise.all([api.version(), api.getAutostart()]);
   renderDurations();
   renderSettings();
+  await api.onUpdateAvailable((u) => renderUpdate(u));
   // Live system updates: the app's watcher checks every 2 s while idle and sends only changes.
   await api.onSystem(applySystem);
   const [system, current] = await Promise.all([api.refreshSystem(false), api.getState()]);
   state = current;
   applySystem(system);
+  renderWelcome(system.permissions.platform);
   renderDurations();
   render();
 
