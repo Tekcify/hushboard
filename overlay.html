@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hushboard: keyboard locked</title>
+  </head>
+  <body>
+    <div class="overlay-root">
+      <div class="hb-overlay">
+        <div class="hb-overlay__card">
+          <span class="hb-pill hb-pill--locked" aria-live="polite">Keyboard locked</span>
+          <h1 class="hb-overlay__title">Wipe away</h1>
+          <p class="hb-overlay__text">Key presses are being ignored. Your mouse and trackpad still work.</p>
+
+          <div class="hb-countdown" id="countdown" role="timer" aria-label="Time left">
+            <svg viewBox="0 0 220 220" aria-hidden="true">
+              <circle class="hb-countdown__track" cx="110" cy="110" r="100" />
+              <circle class="hb-countdown__arc" id="arc" cx="110" cy="110" r="100" stroke-dasharray="628.3" stroke-dashoffset="0" />
+            </svg>
+            <div class="hb-countdown__center">
+              <span class="hb-countdown__time" id="time">–:––</span>
+              <span class="hb-countdown__sub" id="time-sub">until unlock</span>
+            </div>
+          </div>
+          <div class="hb-overlay__forever" id="forever" hidden>
+            <span id="forever-icon"></span>
+            <span class="label">No timer. Unlock when you're done.</span>
+          </div>
+
+          <div class="hb-keys" id="keys" aria-label="Last keys ignored"></div>
+
+          <div class="hb-stack" style="align-items: center">
+            <button class="hb-hold" id="hold" type="button" aria-describedby="hold-hint">
+              <span id="hold-icon"></span>
+              <span id="hold-label">Hold to unlock</span>
+            </button>
+            <div class="hb-hold__hint" id="hold-hint">Hold for 1.5 seconds with the mouse or trackpad</div>
+          </div>
+
+          <div class="hb-overlay__escape">
+            <span>Or press</span>
+            <span class="hb-kbd" id="escape-keys"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/overlay.ts"></script>
+  </body>
+</html>

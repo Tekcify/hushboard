@@ -1,0 +1,25 @@
+[package]
+name = "hushboard"
+version = "0.1.0"
+description = "Lock the keyboard while you clean it."
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/tekcify/hushboard"
+
+[lib]
+name = "hushboard_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png", "macos-private-api"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+keylock = { path = "../crates/keylock" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# Window level above the menu bar for the notch island, and notch detection.
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSGeometry"] }

@@ -1,0 +1,47 @@
+{
+  "v": 3,
+  "layout": "files",
+  "createdOnFiles": { "v": 1, "at": "2026-11-12T12:00:00Z" },
+  "title": "Hushboard",
+  "namespace": "Hushboard",
+  "libraries": [],
+  "sections": {},
+  "groups": ["Icons"],
+  "assetGroups": {
+    "Icons": {
+      "name": "Icons",
+      "tile": "xs",
+      "order": ["square-lock-02.svg", "square-unlock-02.svg", "keyboard.svg", "keyboard-off.svg", "laptop.svg", "usb.svg", "bluetooth.svg", "timer-02.svg", "cursor-hold-01.svg", "touchpad-01.svg", "shield-check.svg", "shield-alert.svg", "alert-02.svg", "information-circle.svg", "settings-02.svg", "circle-arrow-reload-01.svg", "cancel-01.svg", "tick-02.svg", "sparkles.svg", "brush-cleaning.svg", "moon-02.svg", "volume-high.svg", "login-03.svg", "apple.svg", "windows-new.svg"],
+      "files": {
+        "square-lock-02.svg": { "name": "square-lock-02.svg", "blob": "2dcbbfc0ae681d321502be731db802e1", "size": 653, "type": "image/svg+xml" },
+        "square-unlock-02.svg": { "name": "square-unlock-02.svg", "blob": "e88575d9db293a1002a85e98f18d29de", "size": 673, "type": "image/svg+xml" },
+        "keyboard.svg": { "name": "keyboard.svg", "blob": "b4f13647aaa6f92f6114ad40b65c172f", "size": 586, "type": "image/svg+xml" },
+        "keyboard-off.svg": { "name": "keyboard-off.svg", "blob": "299d66a0f95123ca3b4746df4de5d476", "size": 658, "type": "image/svg+xml" },
+        "laptop.svg": { "name": "laptop.svg", "blob": "f26e378b23a187dd27c58fba35ab3994", "size": 414, "type": "image/svg+xml" },
+        "usb.svg": { "name": "usb.svg", "blob": "104f4cb8ff6cc4b3c9f26e352e701554", "size": 644, "type": "image/svg+xml" },
+        "bluetooth.svg": { "name": "bluetooth.svg", "blob": "c7eb013ccbe302dff8dcd38fc9e6c480", "size": 827, "type": "image/svg+xml" },
+        "timer-02.svg": { "name": "timer-02.svg", "blob": "bf51b446c6db65d200e77722d08cd134", "size": 318, "type": "image/svg+xml" },
+        "cursor-hold-01.svg": { "name": "cursor-hold-01.svg", "blob": "59a28e58e491ac674bd72bef2b436146", "size": 879, "type": "image/svg+xml" },
+        "touchpad-01.svg": { "name": "touchpad-01.svg", "blob": "5e7cd0348121a02086333cd48f227059", "size": 1760, "type": "image/svg+xml" },
+        "shield-check.svg": { "name": "shield-check.svg", "blob": "d90114be8fc6261a296983ccfe179870", "size": 636, "type": "image/svg+xml" },
+        "shield-alert.svg": { "name": "shield-alert.svg", "blob": "dc8237889ffe0adfbbcc941bf413f6d8", "size": 650, "type": "image/svg+xml" },
+        "alert-02.svg": { "name": "alert-02.svg", "blob": "c974404f67f585836d36538cf56d9c8e", "size": 504, "type": "image/svg+xml" },
+        "information-circle.svg": { "name": "information-circle.svg", "blob": "0e22f9f30c34229aa028ba89eea40e4e", "size": 318, "type": "image/svg+xml" },
+        "settings-02.svg": { "name": "settings-02.svg", "blob": "41a0c396981d98e7401994ee5d0ad550", "size": 1093, "type": "image/svg+xml" },
+        "circle-arrow-reload-01.svg": { "name": "circle-arrow-reload-01.svg", "blob": "726e07a22ed5e97f93310bab5b30371c", "size": 410, "type": "image/svg+xml" },
+        "cancel-01.svg": { "name": "cancel-01.svg", "blob": "06b8aa65e1d444192821e056e91a6aaa", "size": 226, "type": "image/svg+xml" },
+        "tick-02.svg": { "name": "tick-02.svg", "blob": "9577314956fcfab6e4c543735792586d", "size": 227, "type": "image/svg+xml" },
+        "sparkles.svg": { "name": "sparkles.svg", "blob": "d51f7693b30f27b58b560196c5a3ced6", "size": 533, "type": "image/svg+xml" },
+        "brush-cleaning.svg": { "name": "brush-cleaning.svg", "blob": "3e1c7afbbe49ee0d1d19f0b882d4d528", "size": 846, "type": "image/svg+xml" },
+        "moon-02.svg": { "name": "moon-02.svg", "blob": "5740772ea974265372fc0f93392bf06c", "size": 342, "type": "image/svg+xml" },
+        "volume-high.svg": { "name": "volume-high.svg", "blob": "05cc07dc3a3b17b30b568b382e035eb0", "size": 604, "type": "image/svg+xml" },
+        "login-03.svg": { "name": "login-03.svg", "blob": "f76c7ad66b84458ac924bcb73e359d0b", "size": 823, "type": "image/svg+xml" },
+        "apple.svg": { "name": "apple.svg", "blob": "03d24c0ae104a2d05695094fadf9ce56", "size": 624, "type": "image/svg+xml" },
+        "windows-new.svg": { "name": "windows-new.svg", "blob": "9986cb9517cdd6f2f98b5af4b756b3b0", "size": 408, "type": "image/svg+xml" }
+      }
+    }
+  },
+  "blobs": {},
+  "docs": { "readme": "project/README.md", "sections": [] },
+  "lastChange": { "by": "Claude", "at": "2026-11-12T13:00:00Z", "via": "Claude Code", "note": "Added 25 Hugeicons and switched component previews to them." }
+}

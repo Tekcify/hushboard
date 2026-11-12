@@ -1,0 +1,24 @@
+<!-- @dsCard group="Inputs" height=110 subtitle="Settings toggles" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Switch</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&display=swap">
+</head>
+<body>
+<div class="hb-pad hb-stack" style="max-width:420px">
+  <label class="hb-row" style="justify-content:space-between">
+    <span>Dim the screen while locked</span>
+    <button class="hb-switch" type="button" role="switch" aria-checked="true" aria-label="Dim the screen while locked"></button>
+  </label>
+  <label class="hb-row" style="justify-content:space-between">
+    <span>Show keys I press while locked</span>
+    <button class="hb-switch" type="button" role="switch" aria-checked="false" aria-label="Show keys I press while locked"></button>
+  </label>
+</div>
+<script>
+document.querySelectorAll('.hb-switch').forEach(function (s) {
+  s.addEventListener('click', function () { s.setAttribute('aria-checked', s.getAttribute('aria-checked') !== 'true'); });
+});
+</script>
+</body>
+</html>

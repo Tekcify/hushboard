@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" data-theme="dark" class="island-root">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hushboard</title>
+  </head>
+  <body>
+    <div class="island" id="island" data-state="arming">
+      <!-- Arming: "Locking in 3 · Cancel". The whole pill cancels. -->
+      <button class="island__bar island__arming" id="arming" type="button" aria-label="Locking soon. Cancel">
+        <span class="island__side island__caution"><span id="arm-icon"></span>Locking in</span>
+        <span class="island__notch" aria-hidden="true"></span>
+        <span class="island__side"><span class="island__count" id="arm-count">3</span><span class="island__muted">Cancel</span></span>
+      </button>
+
+      <!-- Locked -->
+      <section class="island__locked" id="locked" aria-label="Keyboard locked">
+        <div class="island__ring" id="ring" role="timer" aria-label="Time left">
+          <svg viewBox="0 0 112 112" aria-hidden="true">
+            <circle class="island__track" cx="56" cy="56" r="50" />
+            <circle class="island__arc" id="arc" cx="56" cy="56" r="50" stroke-dasharray="314.2" stroke-dashoffset="0" />
+          </svg>
+          <span class="island__time" id="time">–:––</span>
+          <span class="island__ring-icon" id="ring-icon" hidden></span>
+        </div>
+        <div class="island__info">
+          <div class="island__title">Keyboard locked</div>
+          <div class="island__sub" id="sub"></div>
+          <div class="hb-keys island__keys" id="keys" aria-label="Last keys ignored"></div>
+        </div>
+        <div class="island__actions">
+          <button class="hb-hold island__hold" id="hold" type="button" aria-describedby="hint">
+            <span id="hold-icon"></span><span id="hold-label">Hold to unlock</span>
+          </button>
+          <span class="island__hint" id="hint"></span>
+        </div>
+      </section>
+
+      <!-- Done: "Unlocked · 23 keys ignored", then the window closes -->
+      <div class="island__bar island__done" id="done" role="status">
+        <span class="island__side island__seal"><span id="done-icon"></span>Unlocked</span>
+        <span class="island__notch" aria-hidden="true"></span>
+        <span class="island__side island__muted" id="done-count"></span>
+      </div>
+    </div>
+    <script type="module" src="/src/island.ts"></script>
+  </body>
+</html>

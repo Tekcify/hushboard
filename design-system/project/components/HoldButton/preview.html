@@ -1,0 +1,38 @@
+<!-- @dsCard group="Actions" height=150 subtitle="Press and hold for 1.5 s. Try it." -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>HoldButton</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@500;600&display=swap">
+</head>
+<body>
+<div class="hb-pad hb-stack" style="align-items:center">
+  <button class="hb-hold" id="hold" type="button" aria-describedby="hold-hint">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M12 14.5v3m1-3a1 1 0 1 1-2 0a1 1 0 0 1 2 0M7.5 9V6.5A4.5 4.5 0 0 1 12 2c1.96 0 3.866 1.252 4.5 3"/><path d="M4.268 18.845c.225 1.67 1.608 2.979 3.292 3.056c1.416.065 2.855.099 4.44.099s3.024-.034 4.44-.1c1.684-.076 3.067-1.385 3.292-3.055c.147-1.09.268-2.207.268-3.345s-.121-2.255-.268-3.345c-.225-1.67-1.608-2.979-3.292-3.056A95 95 0 0 0 12 9c-1.585 0-3.024.034-4.44.1c-1.684.076-3.067 1.385-3.292 3.055C4.12 13.245 4 14.362 4 15.5s.121 2.255.268 3.345"/></g></svg>
+    <span id="hold-label">Hold to unlock</span>
+  </button>
+  <div class="hb-hold__hint" id="hold-hint">Keep holding with the mouse or trackpad for 1.5 seconds</div>
+</div>
+<script>
+(function () {
+  var btn = document.getElementById('hold'), label = document.getElementById('hold-label');
+  var ms = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hold-to-unlock')) || 1500;
+  var start = 0, raf = 0;
+  function reset() { cancelAnimationFrame(raf); btn.dataset.holding = 'false'; btn.style.setProperty('--hb-progress', 0); }
+  function tick(t) {
+    var p = Math.min(1, (t - start) / ms);
+    btn.style.setProperty('--hb-progress', p);
+    if (p < 1) { raf = requestAnimationFrame(tick); return; }
+    btn.dataset.done = 'true'; label.textContent = 'Unlocked';
+    setTimeout(function () { btn.dataset.done = 'false'; label.textContent = 'Hold to unlock'; reset(); }, 1400);
+  }
+  btn.addEventListener('pointerdown', function (e) {
+    if (btn.dataset.done === 'true') return;
+    btn.setPointerCapture(e.pointerId); btn.dataset.holding = 'true'; start = performance.now(); raf = requestAnimationFrame(tick);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+    btn.addEventListener(ev, function () { if (btn.dataset.done !== 'true') reset(); });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hushboard</title>
+  </head>
+  <body>
+    <div class="app" id="app">
+      <header class="app__header">
+        <div class="app__brand" id="brand"><span class="title">Hushboard</span></div>
+        <span class="hb-pill" id="status" aria-live="polite">Unlocked</span>
+      </header>
+
+      <main class="app__body">
+        <section class="hb-stack" id="perms" hidden></section>
+        <div class="app__error" id="error" role="alert" hidden></div>
+
+        <section class="app__section" aria-labelledby="dur-label">
+          <h2 class="eyebrow" id="dur-label">Duration</h2>
+          <div class="hb-seg" role="radiogroup" aria-labelledby="dur-label" id="durations"></div>
+          <p class="caption app__note" id="dur-note"></p>
+        </section>
+
+        <section class="app__section" aria-labelledby="kb-label">
+          <h2 class="eyebrow" id="kb-label">Keyboards</h2>
+          <div class="hb-devices" role="group" aria-labelledby="kb-label" id="devices"></div>
+          <p class="caption app__note" id="devices-note" hidden></p>
+        </section>
+
+        <section class="app__section" aria-labelledby="wl-label">
+          <h2 class="eyebrow" id="wl-label">While locked</h2>
+          <div class="app__settings" id="settings"></div>
+        </section>
+      </main>
+
+      <footer class="app__footer" id="footer"></footer>
+    </div>
+    <div class="app__toast" id="toast" role="status" hidden></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

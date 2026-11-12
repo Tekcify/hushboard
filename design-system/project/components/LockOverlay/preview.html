@@ -1,0 +1,44 @@
+<!-- @dsCard group="Screens" height=620 subtitle="The full-screen view while the keyboard is locked" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>LockOverlay</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>html, body { height: 100%; }</style>
+</head>
+<body>
+<div class="hb-overlay">
+  <div class="hb-overlay__card">
+    <span class="hb-pill hb-pill--locked" aria-live="polite">Keyboard locked</span>
+    <h1 class="hb-overlay__title">Wipe away</h1>
+    <p class="hb-overlay__text">Key presses are being ignored. Your mouse and trackpad still work.</p>
+    <div class="hb-countdown" role="timer" aria-label="1 minute 42 seconds left">
+      <svg viewBox="0 0 220 220" aria-hidden="true">
+        <circle class="hb-countdown__track" cx="110" cy="110" r="100"/>
+        <circle class="hb-countdown__arc" cx="110" cy="110" r="100" stroke-dasharray="628.3" stroke-dashoffset="94.2"/>
+      </svg>
+      <div class="hb-countdown__center">
+        <span class="hb-countdown__time">1:42</span>
+        <span class="hb-countdown__sub">until unlock</span>
+      </div>
+    </div>
+    <div class="hb-keys" aria-label="Last keys ignored" style="justify-content:center">
+      <span class="hb-key hb-key--swallowed">J</span>
+      <span class="hb-key hb-key--swallowed">K</span>
+      <span class="hb-key">L</span>
+      <span class="hb-key hb-key--wide hb-key--swallowed">⏎</span>
+    </div>
+    <div class="hb-stack" style="align-items:center">
+      <button class="hb-hold" type="button" aria-describedby="ov-hint">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M12 14.5v3m1-3a1 1 0 1 1-2 0a1 1 0 0 1 2 0M7.5 9V6.5A4.5 4.5 0 0 1 12 2c1.96 0 3.866 1.252 4.5 3"/><path d="M4.268 18.845c.225 1.67 1.608 2.979 3.292 3.056c1.416.065 2.855.099 4.44.099s3.024-.034 4.44-.1c1.684-.076 3.067-1.385 3.292-3.055c.147-1.09.268-2.207.268-3.345s-.121-2.255-.268-3.345c-.225-1.67-1.608-2.979-3.292-3.056A95 95 0 0 0 12 9c-1.585 0-3.024.034-4.44.1c-1.684.076-3.067 1.385-3.292 3.055C4.12 13.245 4 14.362 4 15.5s.121 2.255.268 3.345"/></g></svg>
+        Hold to unlock
+      </button>
+      <div class="hb-hold__hint" id="ov-hint">Hold for 1.5 seconds with the mouse or trackpad</div>
+    </div>
+    <div class="hb-overlay__escape">
+      <span>Or press</span>
+      <span class="hb-kbd"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>U</kbd></span>
+    </div>
+  </div>
+</div>
+</body>
+</html>
