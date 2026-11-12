@@ -1,0 +1,27 @@
+<!-- @dsCard group="Inputs" height=110 subtitle="How long the lock lasts" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>DurationPicker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&display=swap">
+</head>
+<body>
+<div class="hb-pad">
+  <div class="hb-field">
+    <span class="hb-field__label" id="dur-label">Unlock automatically after</span>
+    <div class="hb-seg" role="radiogroup" aria-labelledby="dur-label" id="dur">
+      <button type="button" role="radio" aria-checked="false">30 s</button>
+      <button type="button" role="radio" aria-checked="false">1 min</button>
+      <button type="button" role="radio" aria-checked="true">2 min</button>
+      <button type="button" role="radio" aria-checked="false">5 min</button>
+      <button type="button" role="radio" aria-checked="false">Never</button>
+    </div>
+  </div>
+</div>
+<script>
+document.getElementById('dur').addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  this.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-checked', x === b ? 'true' : 'false'); });
+});
+</script>
+</body>
+</html>

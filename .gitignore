@@ -1,0 +1,14 @@
+# Build output
+node_modules/
+dist/
+target/
+src-tauri/gen/
+
+# Mobile icon sets that `tauri icon` generates (Hushboard is desktop only)
+src-tauri/icons/android/
+src-tauri/icons/ios/
+
+# Local tooling
+.claude/
+.DS_Store
+*.log

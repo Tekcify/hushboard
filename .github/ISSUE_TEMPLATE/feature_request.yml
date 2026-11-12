@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest an idea or an improvement.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Start with the situation, not the solution.
+      placeholder: When I clean my external keyboard, the built-in one still gets locked and I can't type a note.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: How you'd like it to work. Mockups welcome.
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: Which platforms does it matter on?
+      options:
+        - label: macOS
+        - label: Windows
+        - label: Linux

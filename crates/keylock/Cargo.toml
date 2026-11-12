@@ -1,0 +1,30 @@
+[package]
+name = "keylock"
+version = "0.1.0"
+edition = "2021"
+description = "Temporarily swallow keyboard input on macOS, Windows and Linux."
+license = "MIT"
+repository = "https://github.com/tekcify/hushboard"
+readme = "../../README.md"
+keywords = ["keyboard", "lock", "input", "macos", "windows"]
+categories = ["os", "hardware-support"]
+
+[dependencies]
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10"
+libc = "0.2"
+serde_json = "1"
+sha2 = "0.10"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+  "Win32_Foundation",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_System_LibraryLoader",
+  "Win32_System_Threading",
+] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+evdev = "0.12"
+libc = "0.2"

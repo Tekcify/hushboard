@@ -1,0 +1,41 @@
+<!-- @dsCard group="Status" height=260 subtitle="Running · last 10 s (caution) · compact" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Countdown</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@500;600&display=swap">
+</head>
+<body>
+<div class="hb-pad hb-row" style="gap:var(--space-8)">
+  <div class="hb-countdown" role="timer" aria-label="1 minute 42 seconds left">
+    <svg viewBox="0 0 220 220" aria-hidden="true">
+      <circle class="hb-countdown__track" cx="110" cy="110" r="100"/>
+      <circle class="hb-countdown__arc" cx="110" cy="110" r="100" stroke-dasharray="628.3" stroke-dashoffset="94.2"/>
+    </svg>
+    <div class="hb-countdown__center">
+      <span class="hb-countdown__time">1:42</span>
+      <span class="hb-countdown__sub">until unlock</span>
+    </div>
+  </div>
+  <div class="hb-countdown hb-countdown--caution" role="timer" aria-label="8 seconds left">
+    <svg viewBox="0 0 220 220" aria-hidden="true">
+      <circle class="hb-countdown__track" cx="110" cy="110" r="100"/>
+      <circle class="hb-countdown__arc" cx="110" cy="110" r="100" stroke-dasharray="628.3" stroke-dashoffset="586.4"/>
+    </svg>
+    <div class="hb-countdown__center">
+      <span class="hb-countdown__time">0:08</span>
+      <span class="hb-countdown__sub">unlocking soon</span>
+    </div>
+  </div>
+  <div class="hb-countdown hb-countdown--sm" role="timer" aria-label="3 seconds until lock">
+    <svg viewBox="0 0 220 220" aria-hidden="true">
+      <circle class="hb-countdown__track" cx="110" cy="110" r="100"/>
+      <circle class="hb-countdown__arc" cx="110" cy="110" r="100" stroke-dasharray="628.3" stroke-dashoffset="0" style="stroke:var(--caution)"/>
+    </svg>
+    <div class="hb-countdown__center">
+      <span class="hb-countdown__time">3</span>
+      <span class="hb-countdown__sub">locking</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>
