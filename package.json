@@ -1,7 +1,7 @@
 {
   "name": "hushboard",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "description": "Lock the keyboard while you clean it. macOS, Windows and Linux.",
   "license": "MIT",
   "repository": {
