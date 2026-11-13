@@ -72,7 +72,7 @@ It runs as root, so:
 - **Rust:** idiomatic, `cargo clippy` clean. Prefer clear names and short doc comments that say *why*.
 - **TypeScript:** strict mode, no new dependencies without a good reason.
 - **UI copy:** sentence case, plain words, say what will happen ("Lock keyboard", "Hold to unlock"). Follow the voice in `design-system/project/README.md`.
-- **Icons:** only from the Hugeicons free set (stroke rounded). Add the SVG to `design-system/project/assets/Icons/` and list it in that folder's README.
+- **Icons:** only from Nucleo's free Glass set, which is under the Nucleo license, not MIT. Hushboard may ship at most 100 Nucleo icons in total. Take the icon from Nucleo yourself, keep its copyright notice, add it to `design-system/project/assets/IconsGlass/`, map it in `src/icons.ts` and list it in that folder's README.
 - **Accessibility:** real buttons and labels, visible focus, 4.5:1 text contrast in both themes.
 
 ### Commits and pull requests

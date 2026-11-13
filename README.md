@@ -65,7 +65,7 @@ Release build: `npm run tauri build`. To work on the UI in a browser with a simu
 | `src-tauri/src/lib.rs` | The lock state machine (idle → arming → locked), the live system watcher, and the commands the UI calls. |
 | `src-tauri/src/shell.rs` | Tray icon and menu, the tray panel, the island windows. |
 | `src/` | The web UI: `main.ts` (panel/window), `island.ts`, `overlay.ts` (full-screen view), `tokens.ts` (design tokens to CSS). |
-| `design-system/` | Hushboard's design system: tokens, component CSS and guidelines, and the icons (Hugeicons). |
+| `design-system/` | Hushboard's design system: tokens, component CSS and guidelines, and the icons (Nucleo Glass). |
 | `docs/` | [Installing](docs/installing.md), [releasing](docs/releasing.md), [dev signing](docs/dev-signing.md). |
 
 ## Safety rules
