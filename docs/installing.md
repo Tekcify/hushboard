@@ -16,7 +16,7 @@ Then set up the keyboard helper from the panel (recommended, it makes the lock w
 5. Press **Install helper** and enter your Mac password.
 6. When macOS asks, click **Open System Settings** and switch on **Hushboard Keyboard Helper** under Input Monitoring. The panel shows **Ready** by itself.
 
-> macOS may ask you to switch the helper on again after an update.
+> Updating from 1.0.0 asks you to update the helper once and switch it on again, because it's now signed by Tekcify. After that, updates keep it switched on.
 
 **Uninstall:** quit Hushboard from its panel, move it from Applications to the Bin, then remove the helper:
 

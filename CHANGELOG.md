@@ -21,6 +21,7 @@ All notable changes to Hushboard are recorded here. The format follows [Keep a C
 
 - The locked island is more compact: the lock status, the time left and the ways to unlock, with the keys you press taking the place of the caption while you type.
 - The panel's last section is now called Options.
+- The macOS keyboard helper ships inside the app, signed by Tekcify. Updating from 1.0.0 asks you to update the helper and switch it on in Input Monitoring once more; after that, updates keep it switched on.
 
 ## [1.0.0] - 2026-11-13
 
