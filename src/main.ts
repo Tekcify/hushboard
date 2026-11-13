@@ -595,11 +595,26 @@ async function boot() {
         delete rootEl.dataset.caret;
       }
     });
+    // Open and close animations (app.css). Re-adding the attribute restarts the open animation
+    // even if the previous one hadn't finished.
+    const rootEl = document.documentElement;
+    await api.onPanelOpen(() => {
+      delete rootEl.dataset.panel;
+      void rootEl.offsetWidth;
+      rootEl.dataset.panel = "opening";
+    });
+    await api.onPanelClosing(() => {
+      rootEl.dataset.panel = "closing";
+    });
+    document.body.addEventListener("animationend", (e) => {
+      if (e.target === document.body && rootEl.dataset.panel === "opening") delete rootEl.dataset.panel;
+    });
     // Size the panel window to its card, whenever the content changes height.
     const card = $("app");
     let last = 0;
     new ResizeObserver(() => {
-      const height = Math.ceil(card.getBoundingClientRect().height) + 20; // + shadow margin
+      // The card's bottom edge (which includes the room above it for the caret) + the shadow margin.
+      const height = Math.ceil(card.getBoundingClientRect().bottom) + 10;
       if (height !== last) {
         last = height;
         api.fitPanel(height);
