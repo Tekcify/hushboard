@@ -4,7 +4,7 @@
 
 Hushboard is a small, open-source desktop app for **macOS, Windows and Linux**, built with [Tauri](https://tauri.app) (Rust + web UI).
 
-> **Status:** beta. **[Download the latest release](https://github.com/tekcify/hushboard/releases)** for macOS, Windows or Linux, then follow [Installing Hushboard](docs/installing.md). Beta builds aren't signed by Apple or Microsoft yet, so your system warns you on first launch; the guide shows how to get past that. Hushboard updates itself once installed.
+> **Status:** 1.0. **[Download the latest release](https://github.com/tekcify/hushboard/releases/latest)** for macOS, Windows or Linux, then follow [Installing Hushboard](docs/installing.md). Builds aren't signed by Apple or Microsoft yet, so your system warns you on first launch; the guide shows how to get past that. Hushboard updates itself once installed.
 
 ## What it does
 

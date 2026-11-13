@@ -1,6 +1,6 @@
 [package]
 name = "hushboard"
-version = "0.1.0-beta.2"
+version = "1.0.0"
 description = "Lock the keyboard while you clean it."
 edition = "2021"
 license = "MIT"
