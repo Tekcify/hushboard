@@ -21,8 +21,8 @@ Real copy to reuse:
 | Under it | Locks after 3 s · ⌃⌥U unlocks |
 | Arming | Hands off the keyboard · Cancel |
 | Status | Unlocked · Locking in 3 s · Locked · Setup needed |
-| Sections | Unlock after · Keyboards · While locked |
-| Settings | Cover the screen · Show the keys you press · Open at login |
+| Sections | Unlock after · Keyboards · Options |
+| Settings | Cover the screen · Show the keys you press · Launch sound · Open at login |
 | Overlay headline | Wipe away |
 | Overlay line | Key presses are being ignored. Your mouse and trackpad still work. |
 | Unlock hint | Hold for 1.5 seconds with the mouse or trackpad |
@@ -57,11 +57,14 @@ Real copy to reuse:
 - Main window: about 420 × 560 px, one column. Header (app name in `title` + StatusPill), then sections labelled with `eyebrow`: DURATION (DurationPicker), KEYBOARDS (DeviceRow list), then the primary `hb-btn--lg` "Lock keyboard" pinned to the bottom.
 - First run: one PermissionCard per missing permission comes before everything else, and "Lock keyboard" stays disabled until they are granted.
 - Lock: LockOverlay on every display.
-- Tray / menu bar: StatusPill text plus "Lock for 2 min", "Lock until I unlock", "Open Hushboard", "Quit".
+- Island: wings either side of the notch while arming and done; a compact card below it while locked, with the ring and time, "Keyboard locked", a one-line caption (replaced by the keys you press while you type) and "Hold to unlock" with the escape shortcut. Width (420–640 px), corner radius (0–48 px), size (small, medium, large) and, on macOS, which layer it sits on (everything, or app windows under the menu bar) are user settings, stored by the app and applied live. The preview stays up while a slider is held.
+- Automatic (macOS): "Detect cleaning", off by default. About nine different keys within half a second start a lock with `auto-arm-delay` and Cancel. Only timing is counted, never which keys.
+- Welcome tour: a 520 × 680 window on first launch and from the tray menu. Five steps (welcome, three ways out, set up the keyboard lock where the OS needs it, defaults, where Hushboard lives), one idea each, sentence case, no exclamation marks. A soft key tap, a rising fifth and a quiet "shh" play on launch (synthesised in `src/sound.ts`, off with the Launch sound switch, silent when started at login).
+- Tray / menu bar: StatusPill text plus "Lock for 2 min", "Lock until I unlock", "Open Hushboard", "Welcome tour", "Quit".
 
 ## Iconography
 
-Nucleo's free Glass set: 24 px grid, layered glass (a solid back shape, a frosted front, a light edge), so the icons echo the frosted panel they sit on. They're used everywhere inside the app, in `assets/IconsGlass/` with a table of which icon goes where, and are © Nucleo under the Nucleo license, not MIT (up to 100 icons in public source; read that folder's README before adding any). Always inline them through `icon()`, which gives each copy its own gradient ids. Colour comes from the `glass-*` tokens, not the text colour: neutral by default, clay where something is locked, ready or welcoming, crimson for a problem, and the fill's text colour on a solid button. Sizes: 14–15 px in buttons, 16 px in rows, 18–20 px in cards and the island. Never mix in another family inside the app; the one exception is the menu bar / tray icon, which macOS requires to be a single-colour template image. The brand mark is the Glass `Feather` (a feather duster).
+Nucleo's free Glass set: 24 px grid, layered glass (a solid back shape, a frosted front, a light edge), so the icons echo the frosted panel they sit on. They're used everywhere inside the app, in `assets/IconsGlass/` with a table of which icon goes where, and are © Nucleo under the Nucleo license, not MIT (up to 100 icons in public source; read that folder's README before adding any). Always inline them through `icon()`, which gives each copy its own gradient ids. Colour comes from the `glass-*` tokens, not the text colour: neutral by default, clay where something is locked, ready or welcoming, crimson for a problem, and the fill's text colour on a solid button. Sizes: 14–15 px in buttons, 16 px in rows, 18–20 px in cards and the island. Never mix in another family inside the app; the one exception is the menu bar / tray icon, which macOS requires to be a single-colour template image. The brand mark is the clay logo (`src/brand.ts`, `src-tauri/app-icon.svg`): a cream sweep and two sparkles on a clay tile, used as-is and never recoloured.
 
 ## Components
 

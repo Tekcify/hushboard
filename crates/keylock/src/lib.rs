@@ -223,6 +223,8 @@ impl fmt::Display for Error {
 impl std::error::Error for Error {}
 
 pub(crate) type Sink = Arc<dyn Fn(Event) + Send + Sync + 'static>;
+#[allow(dead_code)]
+pub(crate) type KeySink = Arc<dyn Fn(u16) + Send + Sync + 'static>;
 
 /// An engaged keyboard lock. The keyboard is released when this is dropped.
 pub struct Lock {
@@ -240,6 +242,40 @@ impl Drop for Lock {
     fn drop(&mut self) {
         self.inner.release();
     }
+}
+
+pub struct Monitor {
+    #[cfg(target_os = "macos")]
+    inner: macos::Monitor,
+}
+
+#[cfg(target_os = "macos")]
+impl Drop for Monitor {
+    fn drop(&mut self) {
+        self.inner.stop();
+    }
+}
+
+pub const CAN_MONITOR: bool = cfg!(target_os = "macos");
+
+pub fn monitor<F>(on_key: F) -> Result<Monitor, Error>
+where
+    F: Fn(u16) + Send + Sync + 'static,
+{
+    #[cfg(target_os = "macos")]
+    {
+        macos::monitor(Arc::new(on_key)).map(|inner| Monitor { inner })
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = on_key;
+        Err(Error::Unsupported("detecting cleaning is not available on this system yet".into()))
+    }
+}
+
+pub fn request_listen_access() {
+    #[cfg(target_os = "macos")]
+    macos::request_listen_access();
 }
 
 /// Keyboards this platform can lock. macOS and Windows return one "All keyboards" entry.

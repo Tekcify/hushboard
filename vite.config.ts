@@ -13,6 +13,7 @@ export default defineConfig({
         main: resolve(import.meta.dirname, "index.html"),
         overlay: resolve(import.meta.dirname, "overlay.html"),
         island: resolve(import.meta.dirname, "island.html"),
+        welcome: resolve(import.meta.dirname, "welcome.html"),
       },
     },
   },

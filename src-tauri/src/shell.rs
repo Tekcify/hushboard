@@ -13,6 +13,7 @@
 //! only creates, places, sizes and shows them.
 
 use crate::Phase;
+use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Mutex;
 use tauri::image::Image;
@@ -66,6 +67,7 @@ pub fn create_tray(app: &AppHandle) -> tauri::Result<()> {
             &MenuItem::with_id(app, "lock-forever", "Lock until I unlock", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "open", "Open Hushboard…", true, None::<&str>)?,
+            &MenuItem::with_id(app, "welcome", "Welcome tour…", true, None::<&str>)?,
             &MenuItem::with_id(app, "quit", "Quit Hushboard", true, None::<&str>)?,
         ],
     )?;
@@ -83,6 +85,9 @@ pub fn create_tray(app: &AppHandle) -> tauri::Result<()> {
             "lock-300" => crate::lock_from_tray(app, Some(300)),
             "lock-forever" => crate::lock_from_tray(app, None),
             "open" => show_panel(app),
+            "welcome" => {
+                let _ = show_welcome(app);
+            }
             "quit" => app.exit(0),
             _ => {}
         })
@@ -145,7 +150,9 @@ pub fn create_main_window(app: &AppHandle) -> tauri::Result<()> {
         let handle = app.clone();
         window.on_window_event(move |event| {
             if let tauri::WindowEvent::Focused(false) = event {
-                hide_panel(&handle);
+                if !island_just_shown() {
+                    hide_panel(&handle);
+                }
             }
         });
     } else {
@@ -347,6 +354,57 @@ pub fn fit_panel(app: &AppHandle, height: f64) {
     }
 }
 
+pub fn show_welcome(app: &AppHandle) -> tauri::Result<()> {
+    if let Some(window) = app.get_webview_window("welcome") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+        return Ok(());
+    }
+    hide_panel(app);
+    let dark = app
+        .get_webview_window("main")
+        .and_then(|w| w.theme().ok())
+        .map(|t| t == tauri::Theme::Dark)
+        .unwrap_or(false);
+    let background = if dark { tauri::window::Color(21, 18, 15, 255) } else { tauri::window::Color(247, 243, 237, 255) };
+    let builder = WebviewWindowBuilder::new(app, "welcome", WebviewUrl::App("welcome.html".into()))
+        .title("Welcome to Hushboard")
+        .inner_size(520.0, 680.0)
+        .resizable(false)
+        .maximizable(false)
+        .center()
+        .background_color(background)
+        .visible(false)
+        .on_page_load(|window, payload| {
+            if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        });
+    #[cfg(target_os = "macos")]
+    let builder = builder.title_bar_style(tauri::TitleBarStyle::Overlay).hidden_title(true);
+    let window = builder.build()?;
+    let handle = app.clone();
+    window.on_window_event(move |event| {
+        if let tauri::WindowEvent::CloseRequested { .. } = event {
+            crate::mark_welcomed(&handle);
+            let handle = handle.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_millis(320));
+                show_panel(&handle);
+            });
+        }
+    });
+    Ok(())
+}
+
+pub fn close_welcome(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("welcome") {
+        let _ = window.close();
+    }
+}
+
 // ---------------------------------------------------------------------------------------------
 // Island (macOS) / pill (Windows) / card (Linux): one per monitor while arming and locked
 // ---------------------------------------------------------------------------------------------
@@ -359,19 +417,158 @@ pub enum IslandState {
     Done,
 }
 
-/// Logical size of the island window for a state, per platform.
-fn island_size(state: IslandState) -> (f64, f64) {
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Layer {
+    Everything,
+    Windows,
+}
+
+#[derive(Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IslandPrefs {
+    pub width: Option<f64>,
+    pub radius: Option<f64>,
+    pub scale: Option<f64>,
+    pub layer: Option<Layer>,
+}
+
+static ISLAND_PREFS: Mutex<IslandPrefs> = Mutex::new(IslandPrefs { width: None, radius: None, scale: None, layer: None });
+static SAVE_GEN: AtomicU64 = AtomicU64::new(0);
+static ISLAND_SHOWN_AT: AtomicU64 = AtomicU64::new(0);
+
+fn now_ms() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
+}
+
+pub fn island_just_shown() -> bool {
+    now_ms().saturating_sub(ISLAND_SHOWN_AT.load(Ordering::SeqCst)) < 700
+}
+
+fn above_menu_bar(prefs: &IslandPrefs) -> bool {
+    prefs.layer != Some(Layer::Windows)
+}
+
+fn notch_for(index: usize, prefs: &IslandPrefs) -> bool {
+    HAS_NOTCH.load(Ordering::Relaxed) && index == 0 && above_menu_bar(prefs)
+}
+static PREVIEW_GEN: AtomicU64 = AtomicU64::new(0);
+static PREVIEWING: AtomicBool = AtomicBool::new(false);
+
+pub fn previewing() -> bool {
+    PREVIEWING.load(Ordering::SeqCst)
+}
+
+fn island_prefs_path(app: &AppHandle) -> Option<std::path::PathBuf> {
+    app.path().app_data_dir().ok().map(|dir| dir.join("island.json"))
+}
+
+pub fn load_island_prefs(app: &AppHandle) {
+    let prefs = island_prefs_path(app)
+        .and_then(|path| std::fs::read_to_string(path).ok())
+        .and_then(|text| serde_json::from_str::<IslandPrefs>(&text).ok())
+        .unwrap_or_default();
+    *ISLAND_PREFS.lock().unwrap() = prefs;
+}
+
+pub fn island_prefs() -> IslandPrefs {
+    *ISLAND_PREFS.lock().unwrap()
+}
+
+fn island_scale(prefs: &IslandPrefs) -> f64 {
+    prefs.scale.unwrap_or(1.0).clamp(0.85, 1.3)
+}
+
+fn island_width(prefs: &IslandPrefs) -> f64 {
+    let default = if cfg!(target_os = "macos") {
+        480.0
+    } else if cfg!(windows) {
+        480.0
+    } else {
+        580.0
+    };
+    prefs.width.unwrap_or(default).clamp(420.0, 640.0)
+}
+
+fn island_size(state: IslandState, notch: bool) -> (f64, f64) {
+    let prefs = island_prefs();
+    let scale = island_scale(&prefs);
+    let width = island_width(&prefs);
+    let top = if notch { 44.0 } else { 32.0 };
     match (cfg!(target_os = "macos"), cfg!(windows), state) {
-        // macOS: wings either side of the notch, then a card that drops below it.
-        (true, _, IslandState::Locked) => (540.0, 212.0),
-        (true, _, _) => (440.0, 40.0),
-        // Windows: a pill with room for its shadow.
-        (_, true, IslandState::Locked) => (480.0, 96.0),
-        (_, true, _) => (380.0, 80.0),
-        // Linux: a card in the middle of the screen.
-        (_, _, IslandState::Locked) => (580.0, 240.0),
-        _ => (380.0, 80.0),
+        (true, _, IslandState::Locked) => (width, (top + 104.0 * scale + 24.0).round()),
+        (true, _, _) => ((width - 40.0).max(400.0), 40.0),
+        (_, true, IslandState::Locked) => (width * scale, 96.0 * scale),
+        (_, true, _) => ((width - 100.0).max(340.0) * scale, 80.0 * scale),
+        (_, _, IslandState::Locked) => (width * scale, 240.0 * scale),
+        _ => ((width - 200.0).max(380.0) * scale, 80.0 * scale),
     }
+}
+
+pub fn set_island_prefs(app: &AppHandle, prefs: IslandPrefs) {
+    *ISLAND_PREFS.lock().unwrap() = prefs;
+    let generation = SAVE_GEN.fetch_add(1, Ordering::SeqCst) + 1;
+    let handle = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(400));
+        if SAVE_GEN.load(Ordering::SeqCst) != generation {
+            return;
+        }
+        if let Some(path) = island_prefs_path(&handle) {
+            if let Some(dir) = path.parent() {
+                let _ = std::fs::create_dir_all(dir);
+            }
+            if let Ok(text) = serde_json::to_string(&island_prefs()) {
+                let _ = std::fs::write(path, text);
+            }
+        }
+    });
+    for (label, window) in app.webview_windows() {
+        if let Some(index) = label.strip_prefix("island-").and_then(|i| i.parse::<usize>().ok()) {
+            let state = if window.is_visible().unwrap_or(false) { current_island_state(&window) } else { IslandState::Locked };
+            let (w, h) = island_size(state, notch_for(index, &prefs));
+            raise_above_menu_bar(app, &window);
+            place_island(&window, index, app, w, h);
+        }
+    }
+    let _ = app.emit("island-prefs", prefs);
+}
+
+fn current_island_state(window: &WebviewWindow) -> IslandState {
+    let height = window.inner_size().ok().map(|s| s.height as f64 / window.scale_factor().unwrap_or(1.0)).unwrap_or(0.0);
+    if height > 100.0 {
+        IslandState::Locked
+    } else {
+        IslandState::Arming
+    }
+}
+
+pub fn preview_island(app: &AppHandle) {
+    let generation = PREVIEW_GEN.fetch_add(1, Ordering::SeqCst) + 1;
+    if !PREVIEWING.swap(true, Ordering::SeqCst) {
+        show_islands(app, IslandState::Locked);
+        let _ = app.emit("island-preview", ());
+        let handle = app.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(80));
+            if let Some(panel) = handle.get_webview_window("main") {
+                if panel.is_visible().unwrap_or(false) {
+                    let _ = panel.set_focus();
+                }
+            }
+        });
+    }
+    let handle = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(4000));
+        if PREVIEW_GEN.load(Ordering::SeqCst) != generation {
+            return;
+        }
+        PREVIEWING.store(false, Ordering::SeqCst);
+        if handle.state::<crate::AppState>().inner().is_idle() {
+            close_islands(&handle);
+        }
+    });
 }
 
 fn place_island(window: &WebviewWindow, index: usize, app: &AppHandle, w: f64, h: f64) {
@@ -382,31 +579,37 @@ fn place_island(window: &WebviewWindow, index: usize, app: &AppHandle, w: f64, h
     let size = monitor.size().to_logical::<f64>(scale);
     let x = pos.x + (size.width - w) / 2.0;
     let y = if cfg!(target_os = "macos") {
-        pos.y // hangs from the very top, over the notch
+        if above_menu_bar(&island_prefs()) {
+            pos.y
+        } else {
+            monitor.work_area().position.y as f64 / scale
+        }
     } else if cfg!(windows) {
         pos.y + 8.0
     } else {
         pos.y + (size.height - h) / 2.0
     };
-    let _ = window.set_size(LogicalSize::new(w, h));
     let _ = window.set_position(tauri::LogicalPosition::new(x, y));
+    let _ = window.set_size(LogicalSize::new(w, h));
 }
 
-/// Open (or update) an island on every monitor in the given state.
 pub fn show_islands(app: &AppHandle, state: IslandState) {
-    let (w, h) = island_size(state);
+    ISLAND_SHOWN_AT.store(now_ms(), Ordering::SeqCst);
     let monitors = app.available_monitors().unwrap_or_default();
-    let notch = HAS_NOTCH.load(Ordering::Relaxed);
+    let prefs_now = island_prefs();
     for (i, _) in monitors.iter().enumerate() {
+        let notch_here = notch_for(i, &prefs_now);
+        let (w, h) = island_size(state, notch_here);
         let label = format!("island-{i}");
         let window = match app.get_webview_window(&label) {
             Some(w) => w,
             None => {
-                // Only the first (main) screen of a notched Mac has the notch.
+                let prefs = serde_json::to_string(&prefs_now).unwrap_or_else(|_| "{}".into());
                 let script = format!(
-                    "window.__HB_ISLAND = {{ platform: '{}', notch: {} }};",
+                    "window.__HB_ISLAND = {{ platform: '{}', notch: {}, prefs: {} }};",
                     std::env::consts::OS,
-                    notch && i == 0
+                    HAS_NOTCH.load(Ordering::Relaxed) && i == 0,
+                    prefs
                 );
                 let built = WebviewWindowBuilder::new(app, &label, WebviewUrl::App("island.html".into()))
                     .title("Hushboard")
@@ -439,6 +642,7 @@ pub fn show_islands(app: &AppHandle, state: IslandState) {
 }
 
 pub fn close_islands(app: &AppHandle) {
+    PREVIEWING.store(false, Ordering::SeqCst);
     for (label, window) in app.webview_windows() {
         if label.starts_with("island-") {
             let _ = window.close();
@@ -467,9 +671,10 @@ fn raise_above_menu_bar(app: &AppHandle, window: &WebviewWindow) {
     #[cfg(target_os = "macos")]
     {
         let window = window.clone();
+        let above = above_menu_bar(&island_prefs());
         let _ = app.run_on_main_thread(move || {
             if let Ok(ns_window) = window.ns_window() {
-                mac::float_above_menu_bar(ns_window);
+                mac::float_above_menu_bar(ns_window, above);
             }
         });
     }
@@ -486,16 +691,18 @@ mod mac {
 
     /// NSPopUpMenuWindowLevel: above the menu bar (NSMainMenuWindowLevel = 24).
     const POP_UP_MENU_LEVEL: isize = 101;
+    const FLOATING_LEVEL: isize = 3;
     // NSWindowCollectionBehavior: CanJoinAllSpaces | Stationary | IgnoresCycle | FullScreenAuxiliary
     const COLLECTION: usize = (1 << 0) | (1 << 4) | (1 << 6) | (1 << 8);
 
-    pub fn float_above_menu_bar(ns_window: *mut c_void) {
+    pub fn float_above_menu_bar(ns_window: *mut c_void, above_menu: bool) {
         let window = ns_window as *mut AnyObject;
         if window.is_null() {
             return;
         }
         unsafe {
-            let _: () = msg_send![window, setLevel: POP_UP_MENU_LEVEL];
+            let level = if above_menu { POP_UP_MENU_LEVEL } else { FLOATING_LEVEL };
+            let _: () = msg_send![window, setLevel: level];
             let _: () = msg_send![window, setCollectionBehavior: COLLECTION];
             let _: () = msg_send![window, setHidesOnDeactivate: false];
         }

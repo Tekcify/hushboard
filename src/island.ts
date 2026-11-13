@@ -2,7 +2,7 @@
 // Windows, a centred card on Linux. Rust opens one per monitor and sizes it per state; this page
 // only draws the state it's told.
 import "./styles";
-import { api, escapeKeys, formatClock, inTauri, type LockState } from "./api";
+import { api, escapeKeys, formatClock, inTauri, type IslandPrefs, type LockState } from "./api";
 import { wireHold } from "./hold";
 import { icon } from "./icons";
 import { loadSettings } from "./settings";
@@ -10,7 +10,7 @@ import { timingMs } from "./tokens";
 
 declare global {
   interface Window {
-    __HB_ISLAND?: { platform: string; notch: boolean };
+    __HB_ISLAND?: { platform: string; notch: boolean; prefs?: IslandPrefs };
   }
 }
 
@@ -26,6 +26,14 @@ const root = document.documentElement;
 root.dataset.platform = info.platform;
 root.dataset.notch = String(info.notch);
 document.body.classList.add("island-body");
+
+const DEFAULT_RADIUS: Record<string, number> = { macos: 30, windows: 24, linux: 16 };
+function applyPrefs(p?: IslandPrefs) {
+  root.dataset.notch = String(info.notch && p?.layer !== "windows");
+  root.style.setProperty("--island-r", `${p?.radius ?? DEFAULT_RADIUS[info.platform] ?? 24}px`);
+  root.style.setProperty("--island-scale", String(p?.scale ?? 1));
+}
+applyPrefs(info.prefs);
 
 const settings = loadSettings();
 const keys = $("keys");
@@ -64,8 +72,8 @@ function render(s: LockState) {
         ? `${formatClock(left)} left · ${escape}`
         : caution
           ? "Unlocking soon"
-          : "Wipe away. The pointer still works."
-      : "No timer. Unlock when you're done.";
+          : "Pointer still works"
+      : "No timer";
   } else if (wasLocked && !s.error) {
     island.dataset.state = "done";
     const n = s.keysIgnored;
@@ -73,8 +81,15 @@ function render(s: LockState) {
   }
 }
 
+let keysTimer: number | undefined;
 function swallowed(label: string) {
   if (keys.hidden) return;
+  $("island").dataset.keys = "true";
+  window.clearTimeout(keysTimer);
+  keysTimer = window.setTimeout(() => {
+    delete $("island").dataset.keys;
+    keys.replaceChildren();
+  }, 2400);
   const cap = document.createElement("span");
   cap.className = `hb-key hb-key--swallowed hb-key--fresh${label === "space" ? " hb-key--wide" : label.length > 1 ? " hb-key--wide" : ""}`;
   cap.textContent = label;
@@ -100,7 +115,14 @@ async function boot() {
     if (st === "locked") ["J", "K", "space"].forEach(swallowed);
     return;
   }
-  render(await api.getState());
+  const preview = () => {
+    render({ phase: "locked", armingMsLeft: null, remainingMs: 102_000, totalMs: 120_000, keysIgnored: 0, error: null });
+    ["J", "K", "space"].forEach(swallowed);
+  };
+  if (await api.islandPreviewing()) preview();
+  else render(await api.getState());
+  await api.onIslandPrefs(applyPrefs);
+  await api.onIslandPreview(preview);
   await api.onState(render);
   await api.onKeySwallowed(swallowed);
 }
