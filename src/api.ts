@@ -170,19 +170,21 @@ const sim = (() => {
 })();
 
 // Browser simulation's system state. Append ?helper=needs-approval (or missing, outdated, ready)
-// and/or &secure=loginwindow to the URL to preview each card.
+// and/or &secure=loginwindow to the URL to preview each card. &app=denied takes away the app's
+// own Accessibility and Input Monitoring (a fresh install that only set up the helper).
 const simParams = typeof location !== "undefined" ? new URLSearchParams(location.search) : new URLSearchParams();
 const simHelper = (simParams.get("helper") as Permissions["helper"] | null) ?? "ready";
 const simSecure = simParams.get("secure");
+const simApp = simParams.get("app") === "denied" ? "denied" : "granted";
 const simSystem: SystemState = {
   permissions: {
     platform: "macos",
-    accessibility: "granted",
-    inputMonitoring: "granted",
+    accessibility: simApp,
+    inputMonitoring: simApp,
     inputDevices: "not-needed",
     helper: simHelper,
     secureInputHolder: simHelper === "ready" ? null : simSecure,
-    allGranted: simHelper === "ready" || (simHelper === "missing" && !simSecure),
+    allGranted: simHelper === "ready" || (simHelper === "missing" && !simSecure && simApp === "granted"),
   },
   keyboards:
     simHelper === "ready"
