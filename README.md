@@ -8,8 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/tekcify/hushboard/releases/latest"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/download-macos-dark.svg"><img src="docs/images/download-macos.svg" alt="Download for macOS" height="56"></picture></a>
-  <a href="https://github.com/tekcify/hushboard/releases/latest"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/download-windows-dark.svg"><img src="docs/images/download-windows.svg" alt="Download for Windows" height="56"></picture></a>
+  <a href="https://github.com/tekcify/hushboard/releases/download/v1.0.0/Hushboard_1.0.0_universal.dmg"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/download-macos-dark.svg"><img src="docs/images/download-macos.svg" alt="Download for macOS" height="56"></picture></a>
+  <a href="https://github.com/tekcify/hushboard/releases/download/v1.0.0/Hushboard_1.0.0_x64-setup.exe"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/download-windows-dark.svg"><img src="docs/images/download-windows.svg" alt="Download for Windows" height="56"></picture></a>
   <a href="https://github.com/tekcify/hushboard/releases/latest"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/download-linux-dark.svg"><img src="docs/images/download-linux.svg" alt="Download for Linux" height="56"></picture></a>
 </p>
 
@@ -48,7 +48,7 @@ Want the whole screen covered instead? Turn on **Cover the screen while locked**
 
 ## First launch
 
-Hushboard isn't signed by Apple or Microsoft yet, so your system warns you the first time you open it. The [install guide](docs/installing.md) shows how to get past that on each system. Once it's installed, Hushboard updates itself.
+The macOS app is signed and notarized by Apple, so it opens like any other app. The Windows installer isn't signed by Microsoft yet, so Windows warns you the first time you run it. The [install guide](docs/installing.md) shows how to get past that. Once it's installed, Hushboard updates itself.
 
 What each system asks for, once:
 
