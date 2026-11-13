@@ -67,6 +67,18 @@ jobs:
 
       - run: npm ci
 
+      # RPM versions can't contain "-", so a pre-release (0.2.0-beta.1) can't be packaged as an
+      # .rpm. Pre-releases ship the AppImage and .deb on Linux; stable releases add the .rpm.
+      - name: Choose bundles
+        id: bundles
+        shell: bash
+        run: |
+          args="${{ matrix.args }}"
+          if [[ "$RUNNER_OS" == "Linux" && "$TAG" == *-* ]]; then
+            args="$args --bundles appimage,deb"
+          fi
+          echo "args=$args" >> "$GITHUB_OUTPUT"
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -78,7 +90,7 @@ jobs:
           releaseDraft: true
           prerelease: ${{ contains(env.TAG, '-') }}
           includeUpdaterJson: true
-          args: ${{ matrix.args }}
+          args: ${{ steps.bundles.outputs.args }}
           releaseBody: |
             **Beta builds aren't signed by Apple or Microsoft yet**, so your system warns you the first time you open Hushboard. That's expected. Step-by-step instructions: [Installing Hushboard](https://github.com/tekcify/hushboard/blob/main/docs/installing.md).
 
@@ -88,7 +100,7 @@ jobs:
             | `Hushboard_*_x64-setup.exe` | Windows 10 and 11 |
             | `Hushboard_*_amd64.AppImage` | Any Linux (x86-64) |
             | `Hushboard_*_amd64.deb` | Ubuntu, Debian, Mint, Pop!_OS |
-            | `Hushboard-*.x86_64.rpm` | Fedora, openSUSE, RHEL |
+            | `Hushboard-*.x86_64.rpm` | Fedora, openSUSE, RHEL (stable releases only; on a beta, use the AppImage) |
 
             Check your download against `SHA256SUMS.txt`. Once installed, Hushboard updates itself.
 
