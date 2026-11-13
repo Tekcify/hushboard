@@ -65,7 +65,7 @@ Release build: `npm run tauri build`. To work on the UI in a browser with a simu
 | `src-tauri/src/lib.rs` | The lock state machine (idle → arming → locked), the live system watcher, and the commands the UI calls. |
 | `src-tauri/src/shell.rs` | Tray icon and menu, the tray panel, the island windows. |
 | `src/` | The web UI: `main.ts` (panel/window), `island.ts`, `overlay.ts` (full-screen view), `tokens.ts` (design tokens to CSS). |
-| `design-system/` | Hushboard's design system: tokens, component CSS and guidelines, and the icons (Hugeicons). |
+| `design-system/` | Hushboard's design system: tokens, component CSS and guidelines, and the icons (Nucleo Glass). |
 | `docs/` | [Installing](docs/installing.md), [releasing](docs/releasing.md), [prior art and how locking works on each OS](docs/research.md), [dev signing](docs/dev-signing.md). |
 
 ## Safety rules
@@ -83,7 +83,7 @@ Contributions are welcome: bug reports, testing on your hardware (especially Win
 ## Acknowledgements
 
 - [Karabiner-Elements](https://github.com/pqrs-org/Karabiner-Elements) (public domain), whose helper design shaped Hushboard's macOS keyboard helper.
-- [Hugeicons](https://hugeicons.com) free icons (MIT), [Bricolage Grotesque, Instrument Sans and JetBrains Mono](https://fontsource.org) (SIL OFL 1.1). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+- [Nucleo](https://nucleoapp.com/svg-glass-icons) free Glass icons (© Nucleo, under the Nucleo license, not MIT), [Hugeicons](https://hugeicons.com) for the menu bar icon (MIT), [Bricolage Grotesque, Instrument Sans and JetBrains Mono](https://fontsource.org) (SIL OFL 1.1). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 - The keyboard cleaners that came before: see [docs/research.md](docs/research.md).
 
 ## License

@@ -39,6 +39,8 @@ const PANEL_CLOSE_MS: u64 = 150;
 /// Bumped on every open and close, so a pending hide knows whether it's been overtaken.
 static PANEL_GEN: AtomicU64 = AtomicU64::new(0);
 static PANEL_CLOSING: AtomicBool = AtomicBool::new(false);
+/// The panel height the page last asked for (logical px), so placing never reads a stale size.
+static PANEL_HEIGHT: Mutex<Option<f64>> = Mutex::new(None);
 
 // ---------------------------------------------------------------------------------------------
 // Tray
@@ -123,7 +125,13 @@ pub fn create_main_window(app: &AppHandle) -> tauri::Result<()> {
     if uses_panel() {
         let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
             .title("Hushboard")
-            .initialization_script("window.__HB_SHELL = 'panel';")
+            // On macOS the panel sits on the system's frosted popover material (mac::shape_panel),
+            // so the page draws no card background of its own.
+            .initialization_script(if cfg!(target_os = "macos") {
+                "window.__HB_SHELL = 'panel'; window.__HB_MATERIAL = 'native';"
+            } else {
+                "window.__HB_SHELL = 'panel';"
+            })
             .inner_size(PANEL_W, 560.0)
             .decorations(false)
             .transparent(true)
@@ -163,6 +171,21 @@ fn tray_rect(app: &AppHandle, scale: f64) -> Option<(f64, f64, f64, f64)> {
     (s.width > 0.0).then_some((p.x, p.y, s.width, s.height))
 }
 
+/// Where the panel was last placed, for a page that loads (or reloads) after the
+/// `panel-caret` / `panel-room` events went out: it asks with `panel_layout` instead.
+#[derive(Clone, Copy, serde::Serialize)]
+pub struct PanelLayout {
+    /// The pointer's x inside the window (logical px), or None when there's no pointer.
+    caret: Option<f64>,
+    /// The tallest the panel may be (logical px).
+    room: f64,
+}
+static PANEL_LAYOUT: Mutex<Option<PanelLayout>> = Mutex::new(None);
+
+pub fn panel_layout() -> Option<PanelLayout> {
+    *PANEL_LAYOUT.lock().unwrap()
+}
+
 #[derive(Clone, serde::Serialize)]
 struct Caret {
     /// Horizontal position of the icon's centre inside the panel window, logical px.
@@ -173,10 +196,17 @@ struct Caret {
 /// above it (Windows taskbar), centred on the icon and kept inside the screen's usable area,
 /// so the Dock or taskbar never covers it. On macOS the panel also gets a caret pointing at
 /// the icon.
-fn place_panel(app: &AppHandle, window: &WebviewWindow) {
-    let Ok(size) = window.outer_size() else { return };
-    let (pw, ph) = (size.width as f64, size.height as f64);
+fn place_panel(app: &AppHandle, window: &WebviewWindow, logical_size: Option<(f64, f64)>) {
     let scale = window.scale_factor().unwrap_or(1.0);
+    // Right after a resize the window can still report its old size, which would place the
+    // panel and cut its frosted shape for the old height. Callers that just resized pass the new one.
+    let (pw, ph) = match logical_size {
+        Some((w, h)) => (w * scale, h * scale),
+        None => {
+            let Ok(size) = window.outer_size() else { return };
+            (size.width as f64, size.height as f64)
+        }
+    };
     let margin = 8.0 * scale;
 
     let tray = tray_rect(app, scale);
@@ -206,6 +236,22 @@ fn place_panel(app: &AppHandle, window: &WebviewWindow) {
     let y = y.clamp(ay, (ay + ah - ph).max(ay));
     let _ = window.set_position(PhysicalPosition::new(x, y));
     let _ = app.emit_to("main", "panel-caret", caret.map(|x| Caret { x }));
+    // The tallest the panel may be: the screen's usable height (below the menu bar, above the
+    // Dock or taskbar) with a little air. The page caps the card at this and scrolls only beyond it.
+    let room = (ah / scale - 8.0).max(200.0);
+    let _ = app.emit_to("main", "panel-room", room);
+    *PANEL_LAYOUT.lock().unwrap() = Some(PanelLayout { caret, room });
+    // macOS: reshape the frosted background and shadow to the card and its pointer.
+    #[cfg(target_os = "macos")]
+    {
+        let w = window.clone();
+        let (lw, lh) = (pw / scale, ph / scale);
+        let _ = app.run_on_main_thread(move || {
+            if let Ok(ns_window) = w.ns_window() {
+                mac::shape_panel(ns_window, lw, lh, caret);
+            }
+        });
+    }
 }
 
 pub fn show_panel(app: &AppHandle) {
@@ -213,16 +259,40 @@ pub fn show_panel(app: &AppHandle) {
         if uses_panel() {
             // Cancel a close that's still animating.
             PANEL_GEN.fetch_add(1, Ordering::SeqCst);
-            PANEL_CLOSING.store(false, Ordering::SeqCst);
-            place_panel(app, &window);
+            let was_closing = PANEL_CLOSING.swap(false, Ordering::SeqCst);
+            let fitted = PANEL_HEIGHT.lock().unwrap().map(|h| (PANEL_W, h));
+            place_panel(app, &window, fitted);
+            // macOS: start a fresh open from transparent; a cancelled close fades back from
+            // wherever it got to.
+            if !was_closing && !window.is_visible().unwrap_or(false) {
+                fade_panel(app, &window, 0.0, 0.0);
+            }
         }
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
         if uses_panel() {
+            fade_panel(app, &window, 1.0, 0.18);
             let _ = app.emit_to("main", "panel-open", ());
         }
     }
+}
+
+/// macOS: fade the panel window as a whole (its frosted background is a native view, so a CSS
+/// fade of the page alone would leave an empty frosted shape behind). Elsewhere the page
+/// animates itself (app.css), so this does nothing.
+fn fade_panel(app: &AppHandle, window: &WebviewWindow, alpha: f64, secs: f64) {
+    #[cfg(target_os = "macos")]
+    {
+        let w = window.clone();
+        let _ = app.run_on_main_thread(move || {
+            if let Ok(ns_window) = w.ns_window() {
+                mac::fade(ns_window, alpha, secs);
+            }
+        });
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = (app, window, alpha, secs);
 }
 
 /// Close the tray panel: the page plays its close animation, then the window hides. Opening it
@@ -237,6 +307,7 @@ pub fn hide_panel(app: &AppHandle) {
     }
     let generation = PANEL_GEN.fetch_add(1, Ordering::SeqCst) + 1;
     let _ = app.emit_to("main", "panel-closing", ());
+    fade_panel(app, &window, 0.0, 0.13);
     std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_millis(PANEL_CLOSE_MS));
         if PANEL_GEN.load(Ordering::SeqCst) == generation {
@@ -266,10 +337,12 @@ pub fn fit_panel(app: &AppHandle, height: f64) {
         return;
     }
     if let Some(window) = app.get_webview_window("main") {
-        let height = height.clamp(200.0, 760.0);
+        // The page caps itself at the screen's height (panel-room); this is only a backstop.
+        let height = height.clamp(200.0, 2000.0);
+        *PANEL_HEIGHT.lock().unwrap() = Some(height);
         let _ = window.set_size(LogicalSize::new(PANEL_W, height));
         if window.is_visible().unwrap_or(false) {
-            place_panel(app, &window);
+            place_panel(app, &window, Some((PANEL_W, height)));
         }
     }
 }
@@ -425,6 +498,137 @@ mod mac {
             let _: () = msg_send![window, setLevel: POP_UP_MENU_LEVEL];
             let _: () = msg_send![window, setCollectionBehavior: COLLECTION];
             let _: () = msg_send![window, setHidesOnDeactivate: false];
+        }
+    }
+
+    /// The panel's frosted background (an NSVisualEffectView behind the web view), created once.
+    static PANEL_FX: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    /// NSVisualEffectMaterialPopover, the material of menu bar popovers (Blip, Control Center).
+    const MATERIAL_POPOVER: isize = 6;
+    /// Height of the pointer strip at the top of the window: a 2 pt gap, then the 14 pt pointer.
+    /// Matches `.app { margin-top }` in app.css.
+    pub const POINTER_STRIP: f64 = 16.0;
+    const CARD_RADIUS: f64 = 12.0;
+
+    /// Give the tray panel the system's popover material, cut to the card's shape (rounded
+    /// rectangle plus the pointer at `caret_x`, both in points), and the native window shadow,
+    /// which follows that shape. Main thread only.
+    pub fn shape_panel(ns_window: *mut c_void, width: f64, height: f64, caret_x: Option<f64>) {
+        let window = ns_window as *mut AnyObject;
+        if window.is_null() || width < 2.0 * CARD_RADIUS || height < 2.0 * CARD_RADIUS {
+            return;
+        }
+        unsafe {
+            let content: *mut AnyObject = msg_send![window, contentView];
+            if content.is_null() {
+                return;
+            }
+            let mut fx = PANEL_FX.load(std::sync::atomic::Ordering::Relaxed) as *mut AnyObject;
+            if fx.is_null() {
+                let bounds: objc2_foundation::NSRect = msg_send![content, bounds];
+                let alloc: *mut AnyObject = msg_send![class!(NSVisualEffectView), alloc];
+                fx = msg_send![alloc, initWithFrame: bounds];
+                let _: () = msg_send![fx, setMaterial: MATERIAL_POPOVER];
+                let _: () = msg_send![fx, setBlendingMode: 0isize]; // behind the window
+                let _: () = msg_send![fx, setState: 1isize]; // always active, like a popover
+                let _: () = msg_send![fx, setAutoresizingMask: 18usize]; // width + height sizable
+                // NSWindowBelow, relative to nothing: under the web view.
+                let _: () = msg_send![content, addSubview: fx, positioned: -1isize, relativeTo: std::ptr::null_mut::<AnyObject>()];
+                PANEL_FX.store(fx as usize, std::sync::atomic::Ordering::Relaxed);
+            }
+            let pdf = mask_pdf(width, height, caret_x);
+            let data: *mut AnyObject =
+                msg_send![class!(NSData), dataWithBytes: pdf.as_ptr() as *const c_void, length: pdf.len()];
+            let alloc: *mut AnyObject = msg_send![class!(NSImage), alloc];
+            let image: *mut AnyObject = msg_send![alloc, initWithData: data];
+            if image.is_null() {
+                return;
+            }
+            let _: () = msg_send![fx, setMaskImage: image];
+            // The view retains the mask; hand back our +1 from init.
+            drop(objc2::rc::Retained::<AnyObject>::from_raw(image));
+            let _: () = msg_send![window, setHasShadow: true];
+            let _: () = msg_send![window, invalidateShadow];
+        }
+    }
+
+    /// A one-page PDF (NSImage reads it at any size, crisply) of the panel's outline, filled
+    /// black: the card as a rounded rectangle, and with a caret the pointer standing on its top
+    /// edge. The pointer is the same curve as the CSS one it replaces (26 × 14 pt, rounded tip,
+    /// flared base). PDF coordinates start at the bottom left.
+    fn mask_pdf(w: f64, h: f64, caret_x: Option<f64>) -> Vec<u8> {
+        let r = CARD_RADIUS;
+        let k = r * 0.5523; // control-point distance for a quarter circle
+        let top = if caret_x.is_some() { h - POINTER_STRIP } else { h };
+        let mut p = String::new();
+        let mut seg = |s: String| {
+            p.push_str(&s);
+            p.push('\n');
+        };
+        // Clockwise from the bottom of the left edge.
+        seg(format!("0 {:.2} m", r));
+        seg(format!("0 {:.2} l", top - r));
+        seg(format!("0 {:.2} {:.2} {:.2} {:.2} {:.2} c", top - r + k, r - k, top, r, top));
+        if let Some(cx) = caret_x {
+            let x0 = cx.clamp(r + 13.0, w - r - 13.0) - 13.0;
+            // CSS box (y down from the window top, the box starting 2 pt down) → PDF.
+            let pt = |x: f64, y: f64| format!("{:.2} {:.2}", x0 + x, h - 2.0 - y);
+            seg(format!("{} l", pt(0.0, 14.0)));
+            seg(format!("{} {} {} c", pt(2.2, 14.0), pt(3.6, 13.1), pt(4.6, 11.8)));
+            seg(format!("{} l", pt(10.4, 3.2)));
+            seg(format!("{} {} {} c", pt(12.133, 0.8), pt(13.867, 0.8), pt(15.6, 3.2)));
+            seg(format!("{} l", pt(21.4, 11.8)));
+            seg(format!("{} {} {} c", pt(22.4, 13.1), pt(23.8, 14.0), pt(26.0, 14.0)));
+        }
+        seg(format!("{:.2} {:.2} l", w - r, top));
+        seg(format!("{:.2} {:.2} {:.2} {:.2} {:.2} {:.2} c", w - r + k, top, w, top - r + k, w, top - r));
+        seg(format!("{:.2} {:.2} l", w, r));
+        seg(format!("{:.2} {:.2} {:.2} 0 {:.2} 0 c", w, r - k, w - r + k, w - r));
+        seg(format!("{:.2} 0 l", r));
+        seg(format!("{:.2} 0 0 {:.2} 0 {:.2} c", r - k, r - k, r));
+        seg("h f".into());
+
+        let objects = [
+            "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),
+            format!("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {w:.2} {h:.2}] /Contents 4 0 R >>"),
+            format!("<< /Length {} >>\nstream\n{}endstream", p.len(), p),
+        ];
+        let mut out = b"%PDF-1.4\n".to_vec();
+        let mut offsets = Vec::new();
+        for (i, body) in objects.iter().enumerate() {
+            offsets.push(out.len());
+            out.extend_from_slice(format!("{} 0 obj\n{}\nendobj\n", i + 1, body).as_bytes());
+        }
+        let xref = out.len();
+        out.extend_from_slice(format!("xref\n0 {}\n0000000000 65535 f \n", objects.len() + 1).as_bytes());
+        for o in offsets {
+            out.extend_from_slice(format!("{o:010} 00000 n \n").as_bytes());
+        }
+        out.extend_from_slice(
+            format!("trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n", objects.len() + 1).as_bytes(),
+        );
+        out
+    }
+
+    /// Fade the whole window (frosted background, shadow and page together) to `alpha` over
+    /// `secs`, as system popovers do. `secs` 0 sets it at once. Main thread only.
+    pub fn fade(ns_window: *mut c_void, alpha: f64, secs: f64) {
+        let window = ns_window as *mut AnyObject;
+        if window.is_null() {
+            return;
+        }
+        unsafe {
+            if secs <= 0.0 {
+                let _: () = msg_send![window, setAlphaValue: alpha];
+                return;
+            }
+            let _: () = msg_send![class!(NSAnimationContext), beginGrouping];
+            let ctx: *mut AnyObject = msg_send![class!(NSAnimationContext), currentContext];
+            let _: () = msg_send![ctx, setDuration: secs];
+            let animator: *mut AnyObject = msg_send![window, animator];
+            let _: () = msg_send![animator, setAlphaValue: alpha];
+            let _: () = msg_send![class!(NSAnimationContext), endGrouping];
         }
     }
 

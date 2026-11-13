@@ -6,7 +6,8 @@ Hushboard is MIT licensed (see [LICENSE](LICENSE)). It includes or builds on the
 
 | Work | Where | Licence |
 | --- | --- | --- |
-| [Hugeicons](https://hugeicons.com) free icon set (stroke rounded), via [`@iconify-json/hugeicons`](https://github.com/iconify/icon-sets) | `design-system/project/assets/Icons/`, tray icons in `src-tauri/icons/tray-src/` | MIT |
+| [Nucleo Glass](https://nucleoapp.com/svg-glass-icons) free icons (14), from the `nucleo-glass` 1.4.1 package, © Nucleo | `design-system/project/assets/IconsGlass/` | [Nucleo license](https://nucleoapp.com/license) (not MIT): up to 100 icons in public source, copyright notice kept in each file. See that folder's README. |
+| [Hugeicons](https://hugeicons.com) free icon set (stroke rounded), via [`@iconify-json/hugeicons`](https://github.com/iconify/icon-sets) | menu bar and tray icons in `src-tauri/icons/tray-src/` | MIT |
 
 ## Bundled into the app at build time
 
