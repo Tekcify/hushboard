@@ -12,7 +12,6 @@
       </header>
 
       <main class="app__body">
-        <section class="hb-perm app__welcome" id="welcome" aria-labelledby="welcome-title" hidden></section>
         <section class="hb-perm hb-perm--granted app__update" id="update" aria-live="polite" hidden></section>
         <section class="hb-stack" id="perms" hidden></section>
         <div class="app__error" id="error" role="alert" hidden></div>
@@ -29,9 +28,20 @@
           <p class="caption app__note" id="devices-note" hidden></p>
         </section>
 
+        <section class="app__section" aria-labelledby="isl-label">
+          <h2 class="eyebrow" id="isl-label">Island</h2>
+          <div class="app__island" id="island-box"></div>
+        </section>
+
         <section class="app__section" aria-labelledby="wl-label">
-          <h2 class="eyebrow" id="wl-label">While locked</h2>
+          <h2 class="eyebrow" id="wl-label">Options</h2>
           <div class="app__settings" id="settings"></div>
+        </section>
+
+        <section class="app__section" aria-labelledby="det-label">
+          <h2 class="eyebrow" id="det-label">Automatic</h2>
+          <div class="app__settings" id="detect"></div>
+          <p class="caption app__note" id="detect-note"></p>
         </section>
       </main>
 

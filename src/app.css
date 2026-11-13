@@ -21,7 +21,7 @@ code { font-family: var(--font-mono); font-size: 0.92em; }
   --nc-light: var(--glass-edge);
 }
 .hb-glass { flex: none; overflow: visible; }
-:is(.app__brand, .app__welcome .hb-perm__icon, .hb-perm--granted .hb-perm__icon, .hb-pill--locked,
+:is(.app__brand, .hb-perm--granted .hb-perm__icon, .hb-pill--locked,
     .island__seal, .island__ring-icon, .hb-overlay__forever, .hb-key--swallowed) {
   --nc-gradient-1-color-1: var(--glass-clay-1);
   --nc-gradient-1-color-2: var(--glass-clay-2);
@@ -248,7 +248,7 @@ html[data-shell="panel"] .hb-perm__body { gap: 6px; }
 html[data-shell="panel"] .hb-perm__title { font: 600 13px/17px var(--font-ui); gap: 6px; }
 html[data-shell="panel"] .hb-perm__text { font: 400 11px/15px var(--font-ui); }
 html[data-shell="panel"] .hb-perm .hb-row { gap: 6px; }
-html[data-shell="panel"] .hb-perm--granted .hb-perm__icon, html[data-shell="panel"] .app__welcome .hb-perm__icon { background: none; color: var(--seal); }
+html[data-shell="panel"] .hb-perm--granted .hb-perm__icon { background: none; color: var(--seal); }
 html[data-shell="panel"] .hb-perm--blocked { background: color-mix(in srgb, var(--danger) 9%, var(--surface-raised)); }
 html[data-shell="panel"] .hb-perm--blocked .hb-perm__icon { color: var(--danger); }
 html[data-shell="panel"] .app__error { padding: 8px 10px; gap: 8px; grid-template-columns: 16px 1fr; border: 0; border-radius: 9px; font: 400 11px/15px var(--font-ui); background: color-mix(in srgb, var(--danger) 9%, var(--surface-raised)); }
@@ -315,7 +315,6 @@ html[data-material="native"]:not([data-material-preview]) body { animation: none
 .app__links .hb-btn { min-height: 28px; padding: 0 var(--space-2); font-size: 12px; font-weight: 500; }
 /* The Linux window quits from its title bar; only the tray panel needs a Quit button. */
 html:not([data-shell="panel"]) .app__quit { display: none; }
-.app__welcome .hb-perm__icon { background: var(--suds); color: var(--on-suds); }
 
 /* ---------- Island (macOS notch) / pill (Windows) / card (Linux) ----------
    Always dark. The window is exactly the island's size (set from Rust per state). */
@@ -344,37 +343,43 @@ html.island-root, body.island-body { height: 100%; margin: 0; background: transp
 
 .island__locked {
   height: 100%; box-sizing: border-box; padding: var(--island-pad);
-  grid-template-columns: auto 1fr; grid-template-rows: 1fr auto; gap: var(--space-2) var(--space-4); align-items: center;
+  grid-template-columns: auto auto; grid-template-rows: auto auto; justify-content: center; align-content: center;
+  gap: 8px 22px; align-items: center;
   background: var(--island-bg); border-radius: var(--island-radius);
 }
-.island__ring { grid-row: span 2; position: relative; width: var(--ring, 104px); height: var(--ring, 104px); display: grid; place-items: center; }
+.island__ring { grid-row: span 2; position: relative; width: var(--ring, 96px); height: var(--ring, 96px); display: grid; place-items: center; }
 .island__ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
 .island__track { fill: none; stroke: var(--surface-raised); stroke-width: 7; }
 .island__arc { fill: none; stroke: var(--seal); stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset var(--motion-slow) linear; }
 .island--caution .island__arc { stroke: var(--caution); }
-.island__time { position: relative; font: 600 24px/1 var(--font-mono); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.island__time { position: relative; font: 600 22px/1 var(--font-mono); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .island--caution .island__time { color: var(--caution); }
 .island__ring-icon { position: relative; color: var(--seal); }
 .island__ring-icon svg { position: static; transform: none; width: 18px; height: 18px; }
 .island__info { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; align-self: end; }
-.island__title { font: 750 19px/24px var(--font-display); letter-spacing: -0.01em; }
-.island__sub { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
-.island__keys { gap: 6px; min-height: 30px; margin-top: var(--space-1); }
-.island__keys .hb-key { min-width: 30px; height: 28px; font-size: 12px; }
-.island__keys .hb-key--wide { min-width: 54px; }
+.island__title { font: 700 18px/22px var(--font-display); letter-spacing: -0.01em; }
+.island__sub { font-size: 13px; line-height: 18px; color: var(--ink-muted); }
+.island__keys { gap: 6px; min-height: 26px; flex-wrap: nowrap; }
+.island__keys .hb-key { min-width: 26px; height: 26px; font-size: 12px; }
+.island__keys .hb-key--wide { min-width: 52px; }
+.island:not([data-keys="true"]) .island__keys, .island[data-keys="true"] .island__sub { display: none; }
 .island__actions { display: flex; align-items: center; gap: var(--space-3); align-self: start; }
 .island__hold { min-width: 0; min-height: 40px; padding: 0 var(--space-4); font-size: 14px; background: var(--island-bg); }
 .island__hold svg { width: 16px; height: 16px; }
 .island__hint { font-size: 12px; color: var(--ink-muted); white-space: nowrap; }
 
 /* macOS: pure black like the notch, square at the top so it merges with the screen edge. */
-html[data-platform="macos"] { --island-bg: #000; --island-radius: 0 0 20px 20px; --island-pad: 14px 22px 18px; }
-html[data-platform="macos"] .island__locked { --island-radius: 0 0 30px 30px; }
-html[data-platform="macos"][data-notch="true"] { --island-notch: 200px; --island-pad: 44px 22px 18px; }
-html[data-platform="macos"][data-notch="false"] { --island-pad: 32px 22px 18px; }
+html[data-platform="macos"] { --island-bg: #000; --island-radius: 0 0 min(var(--island-r, 22px), 22px) min(var(--island-r, 22px), 22px); --island-pad: 14px 22px 18px; }
+html[data-platform="macos"] .island__locked { --island-radius: 0 0 var(--island-r, 30px) var(--island-r, 30px); }
+html[data-platform="macos"][data-notch="true"] { --island-notch: 200px; --island-pad: 44px 28px 24px; }
+html[data-platform="macos"][data-notch="false"] { --island-pad: 32px 28px 24px; }
+html[data-platform="macos"] .island__locked > * { zoom: var(--island-scale, 1); }
+html:not([data-platform="macos"]) .island {
+  zoom: var(--island-scale, 1); width: calc(100% / var(--island-scale, 1)); height: calc(100% / var(--island-scale, 1));
+}
 
 /* Windows: a floating pill (the window leaves 8–10 px for its shadow). */
-html[data-platform="windows"] { --island-bg: #1f1a16; --island-radius: 999px; --ring: 44px; }
+html[data-platform="windows"] { --island-bg: #1f1a16; --island-radius: var(--island-r, 24px); --ring: 44px; }
 html[data-platform="windows"] .island { padding: 8px 10px 16px; box-sizing: border-box; }
 html[data-platform="windows"] .island__bar,
 html[data-platform="windows"] .island__locked { border: 1px solid #3a322b; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45); }
@@ -388,8 +393,81 @@ html[data-platform="windows"] .island__track { stroke-width: 9; }
 html[data-platform="windows"] .island__arc { stroke-width: 9; }
 
 /* Linux: a card in the middle of the screen. */
-html[data-platform="linux"] { --island-bg: var(--surface-raised); --island-radius: 16px; --island-pad: 20px 24px; --ring: 120px; }
+html[data-platform="linux"] { --island-bg: var(--surface-raised); --island-radius: var(--island-r, 16px); --island-pad: 20px 24px; --ring: 120px; }
 html[data-platform="linux"] .island { padding: 10px; box-sizing: border-box; }
 html[data-platform="linux"] .island__bar,
 html[data-platform="linux"] .island__locked { border: 1px solid var(--line); box-shadow: var(--raised); }
 html[data-platform="linux"] .island__title { font-size: 22px; line-height: 28px; }
+
+:root { --ease-out: cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes hb-rise { from { opacity: 0; transform: translateY(6px); } }
+@keyframes hb-island-in { from { opacity: 0; transform: translateY(-6px) scale(0.97); } }
+@keyframes hb-breathe { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.78); } }
+
+.hb-pill { transition: color var(--motion-fast), background var(--motion-fast), border-color var(--motion-fast); }
+.hb-pill--locked::before, .hb-pill--arming::before { animation: hb-breathe 1.8s ease-in-out infinite; }
+
+.app__footer[data-swap] > * { animation: hb-rise 280ms var(--ease-out) both; }
+.app__footer[data-swap] > :nth-child(2) { animation-delay: 40ms; }
+.app__footer[data-swap] > :nth-child(3) { animation-delay: 80ms; }
+.app__body :is(.hb-perm, .app__error) { animation: hb-rise 320ms var(--ease-out) both; }
+
+.hb-seg button, .hb-device, .app__setting { transition: background var(--motion-fast), color var(--motion-fast), box-shadow var(--motion-fast); }
+.hb-switch::after { transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), background var(--motion-fast); }
+.app__arming .hb-countdown__arc { transition: stroke-dashoffset 220ms linear; }
+.app__toast:not([hidden]) { animation: hb-rise 240ms var(--ease-out) both; }
+
+.island[data-state="arming"] .island__arming,
+.island[data-state="locked"] .island__locked,
+.island[data-state="done"] .island__done { animation: hb-island-in 340ms var(--ease-out) both; }
+.hb-overlay__card { animation: hb-rise 420ms var(--ease-out) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-pill--locked::before, .hb-pill--arming::before { animation: none; }
+  .app__footer[data-swap] > *, .app__body :is(.hb-perm, .app__error), .app__toast:not([hidden]),
+  .island[data-state] > *, .hb-overlay__card { animation: none; }
+  .hb-switch::after { transition: none; }
+}
+
+.app__island-card { overflow: hidden; }
+.app__disclosure {
+  display: grid; grid-template-columns: 1fr 16px; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3) var(--space-4);
+  border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer;
+}
+.app__disclosure-title { display: block; font: 500 14px/20px var(--font-sans); }
+.app__disclosure-meta { display: block; font: 400 12px/16px var(--font-sans); color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.app__disclosure svg { width: 16px; height: 16px; color: var(--ink-muted); transition: transform 220ms var(--ease-out); }
+.app__disclosure[aria-expanded="true"] svg { transform: rotate(90deg); }
+.app__island-body { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-2) var(--space-4) var(--space-4); border-top: 1px solid var(--line); animation: hb-rise 240ms var(--ease-out) both; }
+.app__range { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px var(--space-3); font: 500 13px/18px var(--font-sans); }
+.app__range:first-child { margin-top: var(--space-2); }
+.app__range-value { color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.app__range .hb-seg, .app__range .hb-range { grid-column: 1 / -1; }
+.app__island-actions { gap: var(--space-2); }
+
+.hb-range { -webkit-appearance: none; appearance: none; width: 100%; height: 20px; margin: 0; background: transparent; cursor: pointer; }
+.hb-range::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--seal) var(--p, 50%), var(--surface-sunken) var(--p, 50%)); }
+.hb-range::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; border: 0; background: #fff;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.3); transition: transform 120ms var(--ease-out);
+}
+.hb-range:active::-webkit-slider-thumb { transform: scale(1.12); }
+.hb-range:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; border-radius: 4px; }
+.app__disclosure:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+
+html[data-shell="panel"] .app__disclosure { padding: 7px 10px; }
+html[data-shell="panel"] .app__disclosure-title { font: 400 13px/17px var(--font-ui); }
+html[data-shell="panel"] .app__disclosure-meta { font: 400 11px/14px var(--font-ui); }
+html[data-shell="panel"] .app__island-body { padding: 4px 10px 10px; gap: 10px; border-top: 0.5px solid var(--line); }
+html[data-shell="panel"] .app__range { font: 400 13px/17px var(--font-ui); }
+html[data-shell="panel"] .app__range-value { font: 400 12px/16px var(--font-ui); }
+html[data-shell="panel"] .app__island-card { border: 0; border-radius: 9px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .app__island-body { animation: none; }
+  .app__disclosure svg { transition: none; }
+}
+
+.app__hint { grid-column: 1 / -1; margin: 0; font: 400 11px/15px var(--font-sans); color: var(--ink-muted); }
+.app__note-actions { display: block; margin-top: 6px; }
+html[data-shell="panel"] .app__hint { font: 400 11px/14px var(--font-ui); }

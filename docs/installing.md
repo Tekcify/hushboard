@@ -10,7 +10,7 @@ Download the file for your system from the [latest release](https://github.com/t
 2. Drag **Hushboard** into **Applications**.
 3. Open Hushboard from Applications. macOS says it "can't be opened because Apple cannot check it for malicious software". Click **Done** (not Move to Bin).
 4. Open **System Settings → Privacy & Security**, scroll down to the message about Hushboard, and click **Open Anyway**. Confirm with your password or Touch ID.
-5. Hushboard opens with its panel under a keyboard icon in the menu bar. There's no Dock icon.
+5. Hushboard opens a short welcome tour. When it ends, the panel opens under the keyboard icon in the menu bar. There's no Dock icon. You can replay the tour from the icon's right-click menu.
 
 Then set up the keyboard helper from the panel (recommended, it makes the lock work everywhere):
 

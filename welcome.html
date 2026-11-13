@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to Hushboard</title>
+  </head>
+  <body>
+    <div class="wl" id="wl">
+      <div class="wl__drag" data-tauri-drag-region></div>
+      <main class="wl__stage" id="stage"></main>
+      <footer class="wl__footer">
+        <button class="hb-btn hb-btn--ghost wl__back" id="back" type="button">Back</button>
+        <div class="wl__dots" id="dots" role="img"></div>
+        <button class="hb-btn hb-btn--primary wl__next" id="next" type="button">Get started</button>
+      </footer>
+    </div>
+    <div class="app__toast" id="toast" role="alert" hidden></div>
+    <script type="module" src="/src/welcome.ts"></script>
+  </body>
+</html>

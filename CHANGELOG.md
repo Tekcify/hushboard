@@ -4,6 +4,24 @@ All notable changes to Hushboard are recorded here. The format follows [Keep a C
 
 ## [Unreleased]
 
+### Added
+
+- A welcome tour on first launch: the three ways out, setting up the keyboard lock, your defaults, and where to find Hushboard. It is also in the tray menu as "Welcome tour".
+- "Detect cleaning" (macOS, off by default): when about nine different keys are pressed within half a second, as a cloth wiping across the keys would, Hushboard starts a lock by itself with a short 1.5 second countdown and Cancel. Only the timing of presses is counted, never which keys. It needs Input Monitoring for the app, and stays quiet for 10 seconds after an unlock.
+- "Stay on top of" for the island (macOS): Everything, or App windows to sit under the menu bar.
+- A soft launch sound, with a "Launch sound" switch in the panel. It stays quiet when Hushboard starts at login.
+- An Island section in the panel to set the island's width, corner radius and size, with a live preview while you adjust it. On Windows and Linux it styles the pill and the card.
+- Smoother state changes in the panel, the island and the lock screen.
+
+### Fixed
+
+- The island preview no longer closes while you drag the width slider, and the panel stays open while the island is shown.
+
+### Changed
+
+- The locked island is more compact: the lock status, the time left and the ways to unlock, with the keys you press taking the place of the caption while you type.
+- The panel's last section is now called Options.
+
 ## [1.0.0] - 2026-11-13
 
 The first stable release, with a redesigned menu bar panel. Installed betas update to it on their own.
