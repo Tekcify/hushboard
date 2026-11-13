@@ -7,7 +7,7 @@
 //!   NULL, so the tap is created through the C API directly.)
 
 use crate::mac_helper::{self, HelperStatus};
-use crate::{Error, Event, Helper, Keyboard, Kind, Options, Permissions, Sink, Status};
+use crate::{Error, Event, Helper, KeySink, Keyboard, Kind, Options, Permissions, Sink, Status};
 use core_foundation::base::TCFType;
 use core_foundation::boolean::CFBoolean;
 use core_foundation::dictionary::CFDictionary;
@@ -24,6 +24,8 @@ use std::time::Duration;
 const K_CG_HID_EVENT_TAP: u32 = 0;
 const K_CG_HEAD_INSERT_EVENT_TAP: u32 = 0;
 const K_CG_EVENT_TAP_OPTION_DEFAULT: u32 = 0;
+const K_CG_SESSION_EVENT_TAP: u32 = 1;
+const K_CG_EVENT_TAP_OPTION_LISTEN_ONLY: u32 = 1;
 // CGEventType
 const KEY_DOWN: u32 = 10;
 const KEY_UP: u32 = 11;
@@ -110,6 +112,121 @@ unsafe extern "C" fn tap_callback(_proxy: *mut c_void, etype: u32, event: CGEven
         }
         KEY_UP | FLAGS_CHANGED => std::ptr::null_mut(),
         _ => event,
+    }
+}
+
+struct MonitorState {
+    on_key: KeySink,
+    port: AtomicPtr<c_void>,
+}
+
+unsafe extern "C" fn monitor_callback(_proxy: *mut c_void, etype: u32, event: CGEventRef, user_info: *mut c_void) -> CGEventRef {
+    let state = &*(user_info as *const MonitorState);
+    match etype {
+        TAP_DISABLED_BY_TIMEOUT | TAP_DISABLED_BY_USER_INPUT => {
+            let port = state.port.load(Ordering::SeqCst);
+            if !port.is_null() {
+                CGEventTapEnable(port as CFMachPortRef, true);
+            }
+        }
+        KEY_DOWN => {
+            if CGEventGetIntegerValueField(event, KEYBOARD_EVENT_AUTOREPEAT) == 0 {
+                let code = CGEventGetIntegerValueField(event, KEYBOARD_EVENT_KEYCODE);
+                (state.on_key)(code as u16);
+            }
+        }
+        _ => {}
+    }
+    event
+}
+
+pub struct Monitor {
+    stop: Arc<AtomicBool>,
+    thread: Option<JoinHandle<()>>,
+}
+
+impl Monitor {
+    pub fn stop(&mut self) {
+        self.stop.store(true, Ordering::SeqCst);
+        if let Some(t) = self.thread.take() {
+            if t.thread().id() != std::thread::current().id() {
+                let _ = t.join();
+            }
+        }
+    }
+}
+
+pub fn request_listen_access() {
+    unsafe {
+        CGRequestListenEventAccess();
+    }
+}
+
+pub fn monitor(on_key: KeySink) -> Result<Monitor, Error> {
+    if !unsafe { CGPreflightListenEventAccess() } {
+        return Err(Error::PermissionDenied("Input Monitoring is not allowed".into()));
+    }
+    let stop = Arc::new(AtomicBool::new(false));
+    let stop_thread = stop.clone();
+    let (ready_tx, ready_rx) = mpsc::channel::<Result<(), Error>>();
+
+    let thread = std::thread::Builder::new()
+        .name("keylock-monitor".into())
+        .spawn(move || unsafe {
+            let state = Box::into_raw(Box::new(MonitorState { on_key, port: AtomicPtr::new(std::ptr::null_mut()) }));
+            let raw = CGEventTapCreate(
+                K_CG_SESSION_EVENT_TAP,
+                K_CG_HEAD_INSERT_EVENT_TAP,
+                K_CG_EVENT_TAP_OPTION_LISTEN_ONLY,
+                1u64 << KEY_DOWN,
+                monitor_callback,
+                state as *mut c_void,
+            );
+            if raw.is_null() {
+                drop(Box::from_raw(state));
+                let _ = ready_tx.send(Err(Error::PermissionDenied("macOS refused to let Hushboard watch key presses".into())));
+                return;
+            }
+            (*state).port.store(raw as *mut c_void, Ordering::SeqCst);
+            let port = CFMachPort::wrap_under_create_rule(raw);
+            let source = match port.create_runloop_source(0) {
+                Ok(s) => s,
+                Err(()) => {
+                    CFMachPortInvalidate(raw);
+                    drop(port);
+                    drop(Box::from_raw(state));
+                    let _ = ready_tx.send(Err(Error::Os("could not create a run loop source".into())));
+                    return;
+                }
+            };
+            let run_loop = CFRunLoop::get_current();
+            run_loop.add_source(&source, kCFRunLoopCommonModes);
+            CGEventTapEnable(raw, true);
+            let _ = ready_tx.send(Ok(()));
+
+            while !stop_thread.load(Ordering::SeqCst) {
+                CFRunLoop::run_in_mode(kCFRunLoopDefaultMode, Duration::from_millis(200), false);
+            }
+
+            CGEventTapEnable(raw, false);
+            run_loop.remove_source(&source, kCFRunLoopCommonModes);
+            CFMachPortInvalidate(raw);
+            drop(source);
+            drop(port);
+            drop(Box::from_raw(state));
+        })
+        .map_err(|e| Error::Os(e.to_string()))?;
+
+    match ready_rx.recv_timeout(Duration::from_secs(3)) {
+        Ok(Ok(())) => Ok(Monitor { stop, thread: Some(thread) }),
+        Ok(Err(e)) => {
+            let _ = thread.join();
+            Err(e)
+        }
+        Err(_) => {
+            stop.store(true, Ordering::SeqCst);
+            Err(Error::Os("the key listener did not start in time".into()))
+        }
     }
 }
 

@@ -5,6 +5,7 @@
 //! Phases: Idle → Arming (arm delay, cancellable) → Locked (until the timer, the hold-to-unlock
 //! button or Ctrl + Alt + U) → Idle.
 
+mod cleaning;
 mod shell;
 mod updates;
 
@@ -12,6 +13,7 @@ use serde::Serialize;
 use shell::IslandState;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 
@@ -20,6 +22,10 @@ const MAX_LOCK: Duration = Duration::from_secs(10 * 60);
 const TICK: Duration = Duration::from_millis(200);
 /// The design system's `arm-delay` token, for locks started from the tray menu.
 const ARM_DELAY_MS: u64 = 3000;
+const AUTO_ARM_DELAY_MS: u64 = 1500;
+const AUTO_LOCK_SECS: u64 = 120;
+const QUIET_AFTER_UNLOCK: Duration = Duration::from_secs(10);
+const QUIET_AFTER_DETECT: Duration = Duration::from_secs(15);
 /// How long the island shows "Unlocked" before folding away.
 const DONE_FOR: Duration = Duration::from_secs(2);
 
@@ -35,6 +41,7 @@ pub(crate) enum Phase {
 struct Prefs {
     device_ids: Vec<String>,
     cover_screen: bool,
+    duration_secs: Option<u64>,
 }
 
 struct Inner {
@@ -54,9 +61,19 @@ struct Inner {
     prefs: Prefs,
     /// Phase the tray icon last showed.
     tray_phase: Phase,
+    detect_on: bool,
+    monitor: Option<keylock::Monitor>,
+    monitor_error: Option<String>,
+    quiet_until: Option<Instant>,
 }
 
 pub struct AppState(Mutex<Inner>);
+
+impl AppState {
+    pub(crate) fn is_idle(&self) -> bool {
+        self.0.lock().unwrap().phase == Phase::Idle
+    }
+}
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -175,6 +192,7 @@ fn finish(app: &AppHandle, error: Option<String>) {
         inner.phase = Phase::Idle;
         inner.arm_until = None;
         inner.locked_at = None;
+        inner.quiet_until = Some(Instant::now() + QUIET_AFTER_UNLOCK);
         if error.is_some() {
             // A failed lock often means a permission changed: re-check right away.
             FORCE_THOROUGH.store(true, Ordering::SeqCst);
@@ -366,6 +384,12 @@ fn spawn_system_watcher(app: AppHandle) {
                 }
                 let system = read_system(thorough);
                 last_quick = Instant::now();
+                let before = detect_info(&app);
+                sync_detector(&app);
+                let after = detect_info(&app);
+                if before.running != after.running || before.needs_permission != after.needs_permission {
+                    let _ = app.emit("auto-detect", after);
+                }
                 if thorough {
                     last_thorough = Instant::now();
                 }
@@ -485,8 +509,8 @@ fn unlock(app: AppHandle) {
 
 /// The panel's keyboard and screen choices, so tray-menu locks match them.
 #[tauri::command]
-fn set_prefs(state: State<AppState>, device_ids: Vec<String>, cover_screen: bool) {
-    state.0.lock().unwrap().prefs = Prefs { device_ids, cover_screen };
+fn set_prefs(state: State<AppState>, device_ids: Vec<String>, cover_screen: bool, duration_secs: Option<u64>) {
+    state.0.lock().unwrap().prefs = Prefs { device_ids, cover_screen, duration_secs };
 }
 
 /// The panel's content height changed (logical px, shadow margin included).
@@ -505,6 +529,164 @@ fn panel_layout() -> Option<shell::PanelLayout> {
 #[tauri::command]
 fn hide_panel(app: AppHandle) {
     shell::hide_panel(&app);
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct LaunchInfo {
+    first_run: bool,
+    at_login: bool,
+}
+
+fn welcome_flag(app: &AppHandle) -> Option<PathBuf> {
+    app.path().app_data_dir().ok().map(|dir| dir.join("welcomed-v1"))
+}
+
+fn welcomed(app: &AppHandle) -> bool {
+    welcome_flag(app).map(|path| path.exists()).unwrap_or(true)
+}
+
+pub(crate) fn mark_welcomed(app: &AppHandle) {
+    if let Some(path) = welcome_flag(app) {
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        let _ = std::fs::write(path, "1");
+    }
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct DetectInfo {
+    enabled: bool,
+    supported: bool,
+    running: bool,
+    needs_permission: bool,
+}
+
+fn detect_flag(app: &AppHandle) -> Option<PathBuf> {
+    app.path().app_data_dir().ok().map(|dir| dir.join("detect-cleaning"))
+}
+
+fn load_detect(app: &AppHandle) -> bool {
+    detect_flag(app).and_then(|path| std::fs::read_to_string(path).ok()).map(|text| text.trim() == "on").unwrap_or(false)
+}
+
+fn save_detect(app: &AppHandle, enabled: bool) {
+    if let Some(path) = detect_flag(app) {
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        let _ = std::fs::write(path, if enabled { "on" } else { "off" });
+    }
+}
+
+fn detect_info(app: &AppHandle) -> DetectInfo {
+    let state = app.state::<AppState>();
+    let inner = state.0.lock().unwrap();
+    DetectInfo {
+        enabled: inner.detect_on,
+        supported: keylock::CAN_MONITOR,
+        running: inner.monitor.is_some(),
+        needs_permission: inner.detect_on && inner.monitor.is_none() && inner.monitor_error.is_some(),
+    }
+}
+
+fn auto_lock(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let prefs = {
+        let mut inner = state.0.lock().unwrap();
+        if !inner.detect_on || inner.phase != Phase::Idle {
+            return;
+        }
+        if inner.quiet_until.map(|until| Instant::now() < until).unwrap_or(false) {
+            return;
+        }
+        inner.quiet_until = Some(Instant::now() + QUIET_AFTER_DETECT);
+        inner.prefs.clone()
+    };
+    let seconds = prefs.duration_secs.unwrap_or(AUTO_LOCK_SECS);
+    if let Err(e) = begin_lock(app, Some(seconds), AUTO_ARM_DELAY_MS, prefs.device_ids, prefs.cover_screen) {
+        eprintln!("automatic lock: {e}");
+    }
+}
+
+pub(crate) fn sync_detector(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let mut inner = state.0.lock().unwrap();
+    if !inner.detect_on {
+        inner.monitor = None;
+        inner.monitor_error = None;
+        return;
+    }
+    if inner.monitor.is_some() {
+        return;
+    }
+    let handle = app.clone();
+    let detector = Mutex::new(cleaning::Detector::default());
+    let started = keylock::monitor(move |key| {
+        if detector.lock().unwrap().push(Instant::now(), key) {
+            let handle = handle.clone();
+            std::thread::spawn(move || auto_lock(&handle));
+        }
+    });
+    match started {
+        Ok(monitor) => {
+            inner.monitor = Some(monitor);
+            inner.monitor_error = None;
+        }
+        Err(e) => inner.monitor_error = Some(e.to_string()),
+    }
+}
+
+#[tauri::command]
+fn get_auto_detect(app: AppHandle) -> DetectInfo {
+    detect_info(&app)
+}
+
+#[tauri::command]
+fn set_auto_detect(app: AppHandle, enabled: bool) -> DetectInfo {
+    save_detect(&app, enabled);
+    app.state::<AppState>().0.lock().unwrap().detect_on = enabled;
+    if enabled {
+        keylock::request_listen_access();
+    }
+    sync_detector(&app);
+    let info = detect_info(&app);
+    let _ = app.emit("auto-detect", info.clone());
+    info
+}
+
+#[tauri::command]
+fn get_island_prefs() -> shell::IslandPrefs {
+    shell::island_prefs()
+}
+
+#[tauri::command]
+fn set_island_prefs(app: AppHandle, prefs: shell::IslandPrefs) {
+    shell::set_island_prefs(&app, prefs);
+}
+
+#[tauri::command]
+fn island_previewing() -> bool {
+    shell::previewing()
+}
+
+#[tauri::command]
+fn preview_island(app: AppHandle) {
+    if app.state::<AppState>().is_idle() {
+        shell::preview_island(&app);
+    }
+}
+
+#[tauri::command]
+fn launch_info(info: State<LaunchInfo>) -> LaunchInfo {
+    info.inner().clone()
+}
+
+#[tauri::command]
+fn finish_welcome(app: AppHandle) {
+    shell::close_welcome(&app);
 }
 
 #[tauri::command]
@@ -532,14 +714,29 @@ pub fn run() {
             error: None,
             prefs: Prefs::default(),
             tray_phase: Phase::Idle,
+            detect_on: false,
+            monitor: None,
+            monitor_error: None,
+            quiet_until: None,
         })))
         .setup(|app| {
             shell::init_platform(app);
+            shell::load_island_prefs(app.handle());
+            app.state::<AppState>().0.lock().unwrap().detect_on = load_detect(app.handle());
+            sync_detector(app.handle());
             shell::create_main_window(app.handle())?;
             shell::create_tray(app.handle())?;
-            // Open the panel at launch so it's clear where Hushboard lives, except when it was
-            // started at login, where it should stay quietly in the menu bar or tray.
-            if !updates::launched_at_login() {
+            let first_run = !welcomed(app.handle());
+            let at_login = updates::launched_at_login();
+            app.manage(LaunchInfo { first_run, at_login });
+            if first_run && !at_login {
+                if !shell::uses_panel() {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.hide();
+                    }
+                }
+                shell::show_welcome(app.handle())?;
+            } else if !at_login {
                 shell::show_panel(app.handle());
             }
             updates::spawn_checker(app.handle().clone());
@@ -562,6 +759,14 @@ pub fn run() {
             fit_panel,
             panel_layout,
             hide_panel,
+            launch_info,
+            get_island_prefs,
+            get_auto_detect,
+            set_auto_detect,
+            set_island_prefs,
+            preview_island,
+            island_previewing,
+            finish_welcome,
             quit_app,
             updates::check_for_update,
             updates::install_update,

@@ -1,7 +1,9 @@
 import "./styles";
-import { api, escapeKeys, type Keyboard, type LockState, type Permissions, type SystemState, type UpdateInfo } from "./api";
+import { api, escapeKeys, type DetectInfo, type IslandPrefs, type Keyboard, type LockState, type Permissions, type SystemState, type UpdateInfo } from "./api";
+import { markSvg } from "./brand";
 import { icon, type IconName } from "./icons";
-import { loadSettings, saveSettings, type Settings } from "./settings";
+import { DURATIONS, loadSettings, saveSettings, type Settings } from "./settings";
+import { playLaunch, playOn } from "./sound";
 import { timingMs } from "./tokens";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -22,14 +24,6 @@ const MATERIAL = window.__HB_MATERIAL ?? (params.get("material") === "native" ? 
 if (MATERIAL) document.documentElement.dataset.material = MATERIAL;
 if (!window.__HB_MATERIAL && MATERIAL) document.documentElement.dataset.materialPreview = "true";
 
-const DURATIONS: { secs: number | null; label: string }[] = [
-  { secs: 30, label: "30 s" },
-  { secs: 60, label: "1 min" },
-  { secs: 120, label: "2 min" },
-  { secs: 300, label: "5 min" },
-  { secs: null, label: "Never" },
-];
-
 const ARM_DELAY_MS = timingMs("arm-delay");
 /** How much shorter than its content the tray panel is kept, so its middle can bounce (boot). */
 const BOUNCE_PX = 1;
@@ -46,17 +40,22 @@ const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt
 function persist() {
   saveSettings(settings);
   // Locks started from the tray menu use the same keyboards and screen choice.
-  api.setPrefs(selectedIds(), settings.coverScreen);
+  api.setPrefs(selectedIds(), settings.coverScreen, settings.durationSecs);
 }
 
 // ---------- Duration ----------
 function renderDurations() {
   const group = $("durations");
-  group.innerHTML = DURATIONS.map(
-    (d, i) =>
-      `<button type="button" role="radio" data-i="${i}" aria-checked="${d.secs === settings.durationSecs}"
-        tabindex="${d.secs === settings.durationSecs ? 0 : -1}">${d.label}</button>`,
-  ).join("");
+  if (!group.children.length) {
+    group.innerHTML = DURATIONS.map(
+      (d, i) => `<button type="button" role="radio" data-i="${i}" aria-checked="false" tabindex="-1">${d.label}</button>`,
+    ).join("");
+  }
+  for (const b of Array.from(group.children) as HTMLButtonElement[]) {
+    const on = DURATIONS[Number(b.dataset.i)].secs === settings.durationSecs;
+    b.setAttribute("aria-checked", String(on));
+    b.tabIndex = on ? 0 : -1;
+  }
   // The footer already says how to unlock early; only "Never" needs a word of its own.
   const note = $("dur-note");
   const keys = kbd(escapeKeys(perms?.platform ?? "macos"));
@@ -70,6 +69,7 @@ $("durations").addEventListener("click", (e) => {
   settings.durationSecs = DURATIONS[Number(b.dataset.i)].secs;
   persist();
   renderDurations();
+  renderDetect();
   $("durations").querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus();
 });
 
@@ -81,6 +81,7 @@ $("durations").addEventListener("keydown", (e) => {
   settings.durationSecs = DURATIONS[(i + step + DURATIONS.length) % DURATIONS.length].secs;
   persist();
   renderDurations();
+  renderDetect();
   $("durations").querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus();
 });
 
@@ -159,9 +160,10 @@ $("devices").addEventListener("click", (e) => {
 });
 
 // ---------- While locked ----------
-const SETTINGS_ROWS: { key: "coverScreen" | "showKeys"; label: string; icon: IconName }[] = [
+const SETTINGS_ROWS: { key: "coverScreen" | "showKeys" | "sound"; label: string; icon: IconName }[] = [
   { key: "coverScreen", label: "Cover the screen", icon: "moon-02" },
   { key: "showKeys", label: "Show the keys you press", icon: "keyboard" },
+  { key: "sound", label: "Launch sound", icon: "sparkles" },
 ];
 
 /** Start at login is the OS's setting, not ours: read and written through the app. */
@@ -184,66 +186,204 @@ $("settings").addEventListener("click", async (e) => {
     sw.setAttribute("aria-checked", String(autostart));
     return;
   }
-  const key = sw.dataset.key as "coverScreen" | "showKeys";
+  const key = sw.dataset.key as "coverScreen" | "showKeys" | "sound";
   settings[key] = !settings[key];
   persist();
   sw.setAttribute("aria-checked", String(settings[key]));
+  if (key === "sound" && settings.sound) void playOn();
 });
 
-// ---------- First-run welcome ----------
-const WELCOMED_KEY = "hushboard.welcomed.v1";
+// ---------- Island ----------
+const ISLAND_DEFAULTS: Record<string, { width: number; radius: number; label: string }> = {
+  macos: { width: 480, radius: 30, label: "Island" },
+  windows: { width: 480, radius: 24, label: "Pill" },
+  linux: { width: 580, radius: 16, label: "Card" },
+};
+const ISLAND_SIZES = [
+  { label: "Small", scale: 0.9 },
+  { label: "Medium", scale: 1 },
+  { label: "Large", scale: 1.15 },
+];
+let islandPrefs: IslandPrefs = { width: null, radius: null, scale: null, layer: null };
+let islandOpen = false;
 
-function welcomed(): boolean {
-  try {
-    return localStorage.getItem(WELCOMED_KEY) === "1";
-  } catch {
-    return true; // no storage: don't nag on every launch
-  }
+function islandNow() {
+  const d = ISLAND_DEFAULTS[perms?.platform ?? "macos"] ?? ISLAND_DEFAULTS.macos;
+  const scale = islandPrefs.scale ?? 1;
+  const size = ISLAND_SIZES.reduce((a, b) => (Math.abs(b.scale - scale) < Math.abs(a.scale - scale) ? b : a));
+  return { width: islandPrefs.width ?? d.width, radius: islandPrefs.radius ?? d.radius, size, label: d.label, d, layer: islandPrefs.layer ?? "everything" };
 }
 
-function renderWelcome(platform: string) {
-  const box = $("welcome");
-  if (welcomed()) {
-    box.hidden = true;
-    return;
-  }
-  const where =
-    platform === "macos"
-      ? "Click the keyboard in the menu bar to open this panel, or right-click it to lock in one step."
-      : platform === "windows"
-        ? "Click the keyboard in the system tray to open this panel, or right-click it to lock in one step. If you don't see it, try the ^ arrow."
-        : "Use the keyboard icon in your panel to lock in one step, or this window for everything else.";
-  box.innerHTML = `
-    <span class="hb-perm__icon">${icon("sparkles")}</span>
-    <div class="hb-perm__body">
-      <div class="hb-perm__title" id="welcome-title">Welcome to Hushboard</div>
-      <p class="hb-perm__text">${where}</p>
-      <div class="hb-row">
+function rangeRow(id: string, label: string, value: number, min: number, max: number, step: number) {
+  const p = ((value - min) / (max - min)) * 100;
+  return `<div class="app__range">
+    <label for="${id}">${label}</label><span class="app__range-value" id="${id}-v">${value} px</span>
+    <input class="hb-range" id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${value}" style="--p:${p}%" />
+  </div>`;
+}
+
+function renderIsland() {
+  const box = $("island-box");
+  const v = islandNow();
+  $("isl-label").textContent = v.label;
+  const summary = `${v.width} px · ${v.radius} px radius · ${v.size.label}`;
+  const wasFocused = document.activeElement instanceof HTMLElement ? document.activeElement.id : "";
+  box.innerHTML = `<div class="app__settings app__island-card">
+      <button class="app__disclosure" id="isl-toggle" type="button" aria-expanded="${islandOpen}" aria-controls="isl-body">
+        <span><span class="app__disclosure-title">Customize</span><span class="app__disclosure-meta">${summary}</span></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="app__island-body" id="isl-body" ${islandOpen ? "" : "hidden"}>
+        ${rangeRow("isl-width", "Width", v.width, 420, 640, 10)}
+        ${rangeRow("isl-radius", "Corner radius", v.radius, 0, 48, 1)}
+        <div class="app__range">
+          <span id="isl-size-label">Size</span>
+          <div class="hb-seg" role="radiogroup" aria-labelledby="isl-size-label" id="isl-size">
+            ${ISLAND_SIZES.map((s) => `<button type="button" role="radio" data-scale="${s.scale}" aria-checked="${s === v.size}" tabindex="${s === v.size ? 0 : -1}">${s.label}</button>`).join("")}
+          </div>
+        </div>
         ${
-          // Already opening at login (the settings switch is on): just let them dismiss it.
-          autostart
-            ? `<button class="hb-btn hb-btn--secondary" type="button" id="welcome-done">Got it</button>`
-            : `<button class="hb-btn hb-btn--primary" type="button" id="welcome-autostart">Open at login</button>
-               <button class="hb-btn hb-btn--ghost" type="button" id="welcome-done">Not now</button>`
+          perms?.platform === "macos"
+            ? `<div class="app__range">
+          <span id="isl-layer-label">Stay on top of</span>
+          <div class="hb-seg" role="radiogroup" aria-labelledby="isl-layer-label" id="isl-layer">
+            ${[
+              ["everything", "Everything"],
+              ["windows", "App windows"],
+            ]
+              .map(([id, label]) => `<button type="button" role="radio" data-layer="${id}" aria-checked="${v.layer === id}" tabindex="${v.layer === id ? 0 : -1}">${label}</button>`)
+              .join("")}
+          </div>
+          <p class="app__hint">Everything also covers the menu bar.</p>
+        </div>`
+            : ""
         }
+        <div class="hb-row app__island-actions">
+          <button class="hb-btn hb-btn--secondary" type="button" id="isl-preview">Preview</button>
+          <button class="hb-btn hb-btn--ghost" type="button" id="isl-reset">Reset</button>
+        </div>
       </div>
     </div>`;
-  box.hidden = false;
-  const done = () => {
-    try {
-      localStorage.setItem(WELCOMED_KEY, "1");
-    } catch {
-      /* storage unavailable */
-    }
-    box.hidden = true;
-  };
-  $("welcome-done").addEventListener("click", done);
-  $("welcome-autostart")?.addEventListener("click", async () => {
-    autostart = await api.setAutostart(true).catch(() => autostart);
-    renderSettings();
-    done();
-  });
+  if (wasFocused && box.querySelector(`#${wasFocused}`)) box.querySelector<HTMLElement>(`#${wasFocused}`)!.focus();
 }
+
+let commitQueued = false;
+let lastPreview = 0;
+let keepTimer: number | undefined;
+
+function commitIsland() {
+  if (!commitQueued) {
+    commitQueued = true;
+    requestAnimationFrame(() => {
+      commitQueued = false;
+      api.setIslandPrefs(islandPrefs);
+    });
+  }
+  const now = performance.now();
+  if (now - lastPreview > 600) {
+    lastPreview = now;
+    api.previewIsland();
+  }
+}
+
+function holdPreview() {
+  window.clearInterval(keepTimer);
+  api.previewIsland();
+  keepTimer = window.setInterval(() => api.previewIsland(), 1200);
+}
+
+function releasePreview() {
+  if (keepTimer === undefined) return;
+  window.clearInterval(keepTimer);
+  keepTimer = undefined;
+  api.previewIsland();
+}
+
+$("island-box").addEventListener("pointerdown", (e) => {
+  if ((e.target as HTMLElement).closest("input[type=range]")) holdPreview();
+});
+for (const ev of ["pointerup", "pointercancel", "blur"]) window.addEventListener(ev, releasePreview);
+
+$("island-box").addEventListener("input", (e) => {
+  const input = e.target as HTMLInputElement;
+  if (input.type !== "range") return;
+  const value = Number(input.value);
+  const min = Number(input.min);
+  const max = Number(input.max);
+  input.style.setProperty("--p", `${((value - min) / (max - min)) * 100}%`);
+  $(`${input.id}-v`).textContent = `${value} px`;
+  if (input.id === "isl-width") islandPrefs = { ...islandPrefs, width: value };
+  else islandPrefs = { ...islandPrefs, radius: value };
+  commitIsland();
+});
+
+$("island-box").addEventListener("change", () => {
+  const v = islandNow();
+  const meta = document.querySelector(".app__disclosure-meta");
+  if (meta) meta.textContent = `${v.width} px · ${v.radius} px radius · ${v.size.label}`;
+});
+
+$("island-box").addEventListener("click", (e) => {
+  const t = e.target as HTMLElement;
+  if (t.closest("#isl-toggle")) {
+    islandOpen = !islandOpen;
+    renderIsland();
+    return;
+  }
+  const size = t.closest<HTMLButtonElement>("#isl-size button[data-scale]");
+  if (size) {
+    islandPrefs = { ...islandPrefs, scale: Number(size.dataset.scale) };
+    renderIsland();
+    commitIsland();
+    return;
+  }
+  const layer = t.closest<HTMLButtonElement>("#isl-layer button[data-layer]");
+  if (layer) {
+    islandPrefs = { ...islandPrefs, layer: layer.dataset.layer as IslandPrefs["layer"] };
+    renderIsland();
+    commitIsland();
+    return;
+  }
+  if (t.closest("#isl-preview")) api.previewIsland();
+  if (t.closest("#isl-reset")) {
+    islandPrefs = { width: null, radius: null, scale: null, layer: null };
+    renderIsland();
+    commitIsland();
+  }
+});
+
+// ---------- Detect cleaning ----------
+let detect: DetectInfo = { enabled: false, supported: true, running: false, needsPermission: false };
+
+function renderDetect() {
+  const row = $("detect");
+  const note = $("detect-note");
+  row.innerHTML = `<label class="app__setting" for="set-detect">${icon("brush-cleaning")}<span>Detect cleaning</span>
+      <button class="hb-switch" id="set-detect" type="button" role="switch" aria-checked="${detect.enabled}" ${detect.supported ? "" : "disabled"}></button></label>`;
+  const length = DURATIONS.find((d) => d.secs === (settings.durationSecs ?? 120))?.label ?? "2 min";
+  if (!detect.supported) {
+    note.textContent = "Not available on this system yet.";
+  } else if (detect.enabled && detect.needsPermission) {
+    note.innerHTML = `Allow Hushboard in Input Monitoring so it can notice key presses.
+      <span class="app__note-actions"><button class="hb-btn hb-btn--secondary" type="button" data-detect="settings">Open settings</button></span>`;
+  } else if (detect.enabled) {
+    note.textContent = `On. Locks for ${length} when many keys are pressed at once. Only the timing is counted, never which keys.`;
+  } else {
+    note.textContent = "Locks on its own when many keys are pressed at once, like a cloth wiping across them.";
+  }
+}
+
+$("detect").addEventListener("click", async (e) => {
+  const sw = (e.target as HTMLElement).closest<HTMLButtonElement>("#set-detect");
+  if (!sw || sw.disabled) return;
+  detect = await api.setAutoDetect(!detect.enabled).catch(() => detect);
+  renderDetect();
+  if (detect.enabled) void playOn();
+});
+
+$("detect-note").addEventListener("click", async (e) => {
+  if ((e.target as HTMLElement).closest("[data-detect=settings]")) await api.openHelperSettings();
+});
 
 // ---------- Updates ----------
 function renderUpdate(update: UpdateInfo | null, message?: string) {
@@ -542,6 +682,11 @@ function renderFooter() {
     $("check-updates").addEventListener("click", checkForUpdatesNow);
     $("quit").addEventListener("click", () => api.quit());
   }
+  if (footerPhase !== null && footerPhase !== state.phase) {
+    footer.removeAttribute("data-swap");
+    void footer.offsetWidth;
+    footer.dataset.swap = "true";
+  }
   footerPhase = state.phase;
 }
 
@@ -578,22 +723,33 @@ function render() {
 let appVersion = "";
 
 async function boot() {
-  $("brand").insertAdjacentHTML("afterbegin", icon("brush-cleaning"));
+  $("brand").insertAdjacentHTML("afterbegin", markSvg());
   [appVersion, autostart] = await Promise.all([api.version(), api.getAutostart()]);
   renderDurations();
   renderSettings();
+  islandPrefs = await api.islandPrefs().catch(() => islandPrefs);
+  detect = await api.getAutoDetect().catch(() => detect);
+  await api.onAutoDetect((d) => {
+    detect = d;
+    renderDetect();
+  });
   await api.onUpdateAvailable((u) => renderUpdate(u));
   // Live system updates: the app's watcher checks every 2 s while idle and sends only changes.
   await api.onSystem(applySystem);
   const [system, current] = await Promise.all([api.refreshSystem(false), api.getState()]);
   state = current;
   applySystem(system);
-  renderWelcome(system.permissions.platform);
   renderDurations();
+  renderIsland();
+  renderDetect();
   render();
 
   // Tray-menu locks use the panel's keyboards and screen choice.
-  api.setPrefs(selectedIds(), settings.coverScreen);
+  api.setPrefs(selectedIds(), settings.coverScreen, settings.durationSecs);
+
+  // The welcome tour plays its own; a login item stays quiet.
+  const launch = await api.launchInfo().catch(() => ({ firstRun: false, atLogin: true }));
+  if (!launch.firstRun && !launch.atLogin) void playLaunch();
 
   await api.onState((next) => {
     const wasLocked = state.phase === "locked";

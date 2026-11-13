@@ -46,6 +46,25 @@ const simUpdate: UpdateInfo | null =
     ? { version: "0.1.0-beta.2", currentVersion: "0.1.0-beta.1", notes: "Fixes and improvements." }
     : null;
 
+export interface IslandPrefs {
+  width: number | null;
+  radius: number | null;
+  scale: number | null;
+  layer: "everything" | "windows" | null;
+}
+
+export interface DetectInfo {
+  enabled: boolean;
+  supported: boolean;
+  running: boolean;
+  needsPermission: boolean;
+}
+
+export interface LaunchInfo {
+  firstRun: boolean;
+  atLogin: boolean;
+}
+
 export interface Keyboard {
   id: string;
   name: string;
@@ -176,24 +195,31 @@ const simParams = typeof location !== "undefined" ? new URLSearchParams(location
 const simHelper = (simParams.get("helper") as Permissions["helper"] | null) ?? "ready";
 const simSecure = simParams.get("secure");
 const simApp = simParams.get("app") === "denied" ? "denied" : "granted";
+const simPlatform = simParams.get("platform") ?? "macos";
+const simMac = simPlatform === "macos";
 const simSystem: SystemState = {
   permissions: {
-    platform: "macos",
-    accessibility: simApp,
-    inputMonitoring: simApp,
-    inputDevices: "not-needed",
-    helper: simHelper,
-    secureInputHolder: simHelper === "ready" ? null : simSecure,
-    allGranted: simHelper === "ready" || (simHelper === "missing" && !simSecure && simApp === "granted"),
+    platform: simPlatform,
+    accessibility: simMac ? simApp : "not-needed",
+    inputMonitoring: simMac ? simApp : "not-needed",
+    inputDevices: simPlatform === "linux" ? (simParams.get("input") === "granted" ? "granted" : "denied") : "not-needed",
+    helper: simMac ? simHelper : "not-needed",
+    secureInputHolder: simMac && simHelper !== "ready" ? simSecure : null,
+    allGranted: simMac
+      ? simHelper === "ready" || (simHelper === "missing" && !simSecure && simApp === "granted")
+      : simPlatform !== "linux" || simParams.get("input") === "granted",
   },
   keyboards:
-    simHelper === "ready"
+    simHelper === "ready" || !simMac
       ? [
           { id: "hid:05ac:0341:0000002b", name: "Apple Internal Keyboard", kind: "built-in" },
           { id: "hid:046d:b36a:00000000", name: "MX Keys", kind: "bluetooth" },
         ]
       : [{ id: "all", name: "All keyboards", kind: "all" }],
 };
+
+let simIsland: IslandPrefs = { width: null, radius: null, scale: null, layer: null };
+let simDetect: DetectInfo = { enabled: false, supported: true, running: false, needsPermission: false };
 
 // ---------- public API ----------
 export const api = {
@@ -229,8 +255,19 @@ export const api = {
   unlock: (): Promise<void> => (inTauri ? call("unlock") : Promise.resolve(sim.unlock())),
 
   /** Keyboards and screen choice for locks started from the tray menu. */
-  setPrefs: (deviceIds: string[], coverScreen: boolean): Promise<void> =>
-    inTauri ? call("set_prefs", { deviceIds, coverScreen }) : Promise.resolve(),
+  setPrefs: (deviceIds: string[], coverScreen: boolean, durationSecs: number | null): Promise<void> =>
+    inTauri ? call("set_prefs", { deviceIds, coverScreen, durationSecs }) : Promise.resolve(),
+
+  getAutoDetect: (): Promise<DetectInfo> => (inTauri ? call("get_auto_detect") : Promise.resolve(simDetect)),
+
+  setAutoDetect: (enabled: boolean): Promise<DetectInfo> => {
+    if (inTauri) return call("set_auto_detect", { enabled });
+    simDetect = { ...simDetect, enabled, running: enabled };
+    return Promise.resolve(simDetect);
+  },
+
+  onAutoDetect: async (cb: (d: DetectInfo) => void): Promise<() => void> =>
+    inTauri ? on<DetectInfo>("auto-detect", cb) : () => {},
 
   /** Tray panel: size the window to its content (logical px). */
   fitPanel: (height: number): Promise<void> => (inTauri ? call("fit_panel", { height }) : Promise.resolve()),
@@ -256,6 +293,29 @@ export const api = {
     inTauri ? on<null>("panel-closing", cb) : () => {},
 
   quit: (): Promise<void> => (inTauri ? call("quit_app") : Promise.resolve()),
+
+  islandPrefs: (): Promise<IslandPrefs> =>
+    inTauri ? call("get_island_prefs") : Promise.resolve(simIsland),
+
+  setIslandPrefs: (prefs: IslandPrefs): Promise<void> => {
+    if (!inTauri) simIsland = prefs;
+    return inTauri ? call("set_island_prefs", { prefs }) : Promise.resolve();
+  },
+
+  islandPreviewing: (): Promise<boolean> => (inTauri ? call("island_previewing") : Promise.resolve(false)),
+
+  previewIsland: (): Promise<void> => (inTauri ? call("preview_island") : Promise.resolve()),
+
+  onIslandPrefs: async (cb: (p: IslandPrefs) => void): Promise<() => void> =>
+    inTauri ? on<IslandPrefs>("island-prefs", cb) : () => {},
+
+  onIslandPreview: async (cb: () => void): Promise<() => void> =>
+    inTauri ? on<null>("island-preview", cb) : () => {},
+
+  launchInfo: (): Promise<LaunchInfo> =>
+    inTauri ? call("launch_info") : Promise.resolve({ firstRun: false, atLogin: false }),
+
+  finishWelcome: (): Promise<void> => (inTauri ? call("finish_welcome") : Promise.resolve()),
 
   /** The app's version, e.g. "0.1.0-beta.1". */
   version: async (): Promise<string> => {
