@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="196" height="44" viewBox="0 0 196 44" role="img" aria-label="Star on GitHub">
+  <rect x="1" y="1" width="194" height="42" rx="11" fill="#fffdf9" stroke="#b4532a" stroke-width="2"/>
+  <path transform="translate(18 11)" fill="#b4532a" d="M11 1.6l2.78 5.64l6.22.9l-4.5 4.39l1.06 6.2L11 15.8l-5.56 2.93l1.06-6.2L2 8.14l6.22-.9z" stroke="#b4532a" stroke-width="1.2" stroke-linejoin="round"/>
+  <text x="50" y="27.5" fill="#231c16" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="600">Star on GitHub</text>
+</svg>
