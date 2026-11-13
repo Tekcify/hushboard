@@ -90,7 +90,7 @@ HUSHBOARD_NOTARY_PROFILE=hushboard ./scripts/build-macos-signed.sh
 
 Set `TAURI_SIGNING_PRIVATE_KEY` (and its password) first if you also want the updater files.
 
-The keyboard helper is signed on the user's Mac when the app installs it, not at build time, so it stays ad-hoc signed until the app ships a pre-signed helper.
+Every macOS bundle step runs `scripts/bundle-mac-helper.mjs`, which builds the small `hushboard-keyhelper` binary from `crates/keylock`, wraps it in `Hushboard Keyboard Helper.app` and signs it with `APPLE_SIGNING_IDENTITY` (hardened runtime and timestamp), or ad-hoc when that isn't set. Tauri copies it to `Contents/Helpers/` and seals it into the app's signature, so notarizing the app covers it. When the app installs the helper, it uses this copy if it carries a Developer ID signature, which keeps the helper's Input Monitoring grant across updates. Ad-hoc builds fall back to signing a copy of the app's own executable on the user's Mac.
 
 For signed CI builds, add `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_API_ISSUER`, `APPLE_API_KEY` and `APPLE_API_KEY_PATH` (or `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`) secrets and pass them to `tauri-action` on the macOS job only.
 

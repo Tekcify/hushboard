@@ -7,6 +7,7 @@
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "npm run build",
+    "beforeBundleCommand": "node scripts/bundle-mac-helper.mjs",
     "frontendDist": "../dist"
   },
   "app": {
@@ -37,6 +38,9 @@
     "macOS": {
       "minimumSystemVersion": "11.0",
       "signingIdentity": "-",
+      "files": {
+        "Helpers/Hushboard Keyboard Helper.app": "../target/mac-helper/Hushboard Keyboard Helper.app"
+      },
       "dmg": {
         "windowSize": { "width": 600, "height": 380 }
       }

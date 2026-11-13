@@ -54,4 +54,4 @@ Keychain Access → search "Hushboard Dev" → delete the certificate and its pr
 
 ## Releases
 
-The app signs the helper when it installs it, using `HUSHBOARD_SIGN_IDENTITY` from the environment the app runs in, then "Hushboard Dev", then ad-hoc. Release builds signed with the Tekcify Developer ID are covered in [releasing.md](releasing.md#code-signing).
+Release builds carry a helper pre-signed with the Tekcify Developer ID and install that. Other builds sign the helper when they install it, using `HUSHBOARD_SIGN_IDENTITY` from the environment the app runs in, then "Hushboard Dev", then ad-hoc. See [releasing.md](releasing.md#code-signing).
