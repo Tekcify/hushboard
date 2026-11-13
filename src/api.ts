@@ -241,6 +241,15 @@ export const api = {
   onPanelCaret: async (cb: (caret: { x: number } | null) => void): Promise<() => void> =>
     inTauri ? on<{ x: number } | null>("panel-caret", cb) : () => {},
 
+  /** Tray panel: where it was last placed (pointer x or null, and room), or null before the first
+   *  placement. The page asks on load, since the placement events may have gone out before it listened. */
+  panelLayout: (): Promise<{ caret: number | null; room: number } | null> =>
+    inTauri ? call("panel_layout") : Promise.resolve(null),
+
+  /** Tray panel: the most height the screen has room for (logical px), sent each time it's placed. */
+  onPanelRoom: async (cb: (height: number) => void): Promise<() => void> =>
+    inTauri ? on<number>("panel-room", cb) : () => {},
+
   /** Tray panel: it was just shown (play the open animation) or is about to hide (play the close). */
   onPanelOpen: async (cb: () => void): Promise<() => void> => (inTauri ? on<null>("panel-open", cb) : () => {}),
   onPanelClosing: async (cb: () => void): Promise<() => void> =>

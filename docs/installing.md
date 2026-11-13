@@ -2,7 +2,7 @@
 
 Download the file for your system from the [latest release](https://github.com/tekcify/hushboard/releases). Each release lists a `SHA256SUMS.txt` to check your download against.
 
-> **Beta builds aren't signed by Apple or Microsoft yet.** Your system will warn you the first time you open Hushboard. The steps below get past that safely. Signed builds are planned. Once Hushboard is installed, it updates itself, and updates are signed by the Hushboard team and checked before installing.
+> **Hushboard isn't signed by Apple or Microsoft yet.** Your system will warn you the first time you open Hushboard. The steps below get past that safely. Signed builds are planned. Once Hushboard is installed, it updates itself, and updates are signed by the Hushboard team and checked before installing.
 
 ## macOS (11 Big Sur or later, Apple Silicon or Intel)
 
@@ -17,7 +17,7 @@ Then set up the keyboard helper from the panel (recommended, it makes the lock w
 6. Press **Install helper** and enter your Mac password.
 7. When macOS asks, click **Open System Settings** and switch on **Hushboard Keyboard Helper** under Input Monitoring. The panel shows **Ready** by itself.
 
-> **During the beta,** macOS may ask you to switch the helper on again after an update. Signed builds won't need that.
+> **Until builds are signed,** macOS may ask you to switch the helper on again after an update.
 
 **Uninstall:** quit Hushboard from its panel, move it from Applications to the Bin, then remove the helper:
 
@@ -43,7 +43,7 @@ Pick the package for your distribution:
 | File | Install |
 | --- | --- |
 | `Hushboard_<version>_amd64.deb` (Ubuntu, Debian, Mint, Pop!_OS) | `sudo apt install ./Hushboard_<version>_amd64.deb` |
-| `Hushboard-<version>-1.x86_64.rpm` (Fedora, openSUSE). Stable releases only; during the beta, use the AppImage | `sudo dnf install ./Hushboard-<version>-1.x86_64.rpm` |
+| `Hushboard-<version>-1.x86_64.rpm` (Fedora, openSUSE). Stable releases only; on a beta, use the AppImage | `sudo dnf install ./Hushboard-<version>-1.x86_64.rpm` |
 | `Hushboard_<version>_amd64.AppImage` (any distribution) | `chmod +x Hushboard_*.AppImage`, then run it |
 
 Hushboard needs read access to your keyboards. Add yourself to the `input` group once, then log out and back in:
