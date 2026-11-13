@@ -39,7 +39,7 @@ Under Releases you'll find the draft "Hushboard v0.2.0-beta.1" with:
 | `Hushboard_<v>_universal.dmg` | macOS installer |
 | `Hushboard_universal.app.tar.gz` + `.sig` | macOS update file |
 | `Hushboard_<v>_x64-setup.exe` + `.sig` | Windows installer, also the update file |
-| `Hushboard_<v>_amd64.AppImage` + `.sig`, `.deb`, `.rpm` | Linux |
+| `Hushboard_<v>_amd64.AppImage` + `.sig`, `.deb`, `.rpm` | Linux. Betas have no `.rpm`: RPM versions can't contain `-` |
 | `latest.json` | update manifest |
 | `SHA256SUMS.txt` | checksums of all of the above |
 
