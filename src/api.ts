@@ -239,6 +239,11 @@ export const api = {
   onPanelCaret: async (cb: (caret: { x: number } | null) => void): Promise<() => void> =>
     inTauri ? on<{ x: number } | null>("panel-caret", cb) : () => {},
 
+  /** Tray panel: it was just shown (play the open animation) or is about to hide (play the close). */
+  onPanelOpen: async (cb: () => void): Promise<() => void> => (inTauri ? on<null>("panel-open", cb) : () => {}),
+  onPanelClosing: async (cb: () => void): Promise<() => void> =>
+    inTauri ? on<null>("panel-closing", cb) : () => {},
+
   quit: (): Promise<void> => (inTauri ? call("quit_app") : Promise.resolve()),
 
   /** The app's version, e.g. "0.1.0-beta.1". */
