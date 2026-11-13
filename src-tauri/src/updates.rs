@@ -35,7 +35,17 @@ fn idle(app: &AppHandle) -> bool {
 }
 
 async fn check(app: &AppHandle) -> Result<Option<UpdateInfo>, String> {
-    let found = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?;
+    let found = match app.updater().map_err(|e| e.to_string())?.check().await {
+        Ok(found) => found,
+        // The feed answered without a manifest (404): nothing has been published to it yet,
+        // which happens until the first release is published. That's "no update", not a
+        // failure. Network errors and malformed manifests are other variants and still fail.
+        Err(tauri_plugin_updater::Error::ReleaseNotFound) => {
+            eprintln!("update check: no published release in the update feed yet");
+            None
+        }
+        Err(e) => return Err(e.to_string()),
+    };
     let info = found.as_ref().map(|u| UpdateInfo {
         version: u.version.clone(),
         current_version: u.current_version.clone(),
