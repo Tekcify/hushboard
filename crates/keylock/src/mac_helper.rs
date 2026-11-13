@@ -1,8 +1,10 @@
 //! The macOS keyboard helper: a small root daemon that seizes keyboards on the app's behalf.
 //!
 //! Modelled on Karabiner-Elements' Core-Service (Unlicense):
-//! * The helper is an app bundle, "Hushboard Keyboard Helper.app", ad-hoc signed with the
-//!   identifier `app.hushboard.keyhelper`, so System Settings lists it by name.
+//! * The helper is an app bundle, "Hushboard Keyboard Helper.app", signed with the identifier
+//!   `app.hushboard.keyhelper`, so System Settings lists it by name. Release builds ship it
+//!   pre-signed with the Developer ID inside the app (`Contents/Helpers`); other builds sign a
+//!   copy of the app's own executable when installing.
 //! * The same executable runs in two roles: as the root LaunchDaemon (`--keyhelper`) that seizes
 //!   keyboards, and briefly as the logged-in user (`--keyhelper-request-access`, launched with
 //!   `open`) to ask for Input Monitoring. Asking from the user's session is what makes macOS show
@@ -10,8 +12,7 @@
 //!   bundle, so the daemon gets it too.
 //! * The daemon watches for the grant and restarts itself once it arrives (launchd brings it
 //!   back), so the user never has to restart anything.
-//! * Installed once with the user's admin password (`--keyhelper-install`); the executable is a
-//!   copy of the app's own.
+//! * Installed once with the user's admin password (`--keyhelper-install`).
 //! * Listens on a Unix socket. Only root and the user logged in at the console may connect.
 //! * Speaks newline-delimited JSON. Requests: `status`, `lock {devices}`, `unlock`.
 //!   Messages back: replies with `ok`, then events `key {label}`, `escape`, `released {reason}`.
@@ -38,11 +39,13 @@ pub const BUNDLE_EXE: &str =
 /// Where version 1 and 2 installed a bare executable; removed on install.
 const LEGACY_PATH: &str = "/Library/PrivilegedHelperTools/app.hushboard.keyhelper";
 pub const PLIST_PATH: &str = "/Library/LaunchDaemons/app.hushboard.keyhelper.plist";
+const EMBEDDED: &str = "Helpers/Hushboard Keyboard Helper.app";
 /// Bump when the protocol or the helper's behaviour changes; the app then asks to update it.
 /// 3: signed app bundle, prompts as the user, restarts on grant.
 /// 4: user-side access check, `restart` command, refuses to lock without Input Monitoring.
 /// 5: bundle built and signed by the app (stable "Hushboard Dev" identity when available).
-pub const VERSION: u64 = 5;
+/// 6: Developer ID signed helper shipped inside release builds.
+pub const VERSION: u64 = 6;
 const MAX_LOCK: Duration = Duration::from_secs(30 * 60);
 
 /// One lock at a time across all connections.
@@ -62,6 +65,10 @@ pub fn main_from_args() -> Option<i32> {
             _ => report(Err("usage: --keyhelper-install <staged bundle> <digest>".into())),
         },
         "--keyhelper-uninstall" => report(uninstall()),
+        "--keyhelper-write-bundle" => match args.get(2) {
+            Some(path) => report(write_bundle(Path::new(path)).map_err(|e| e.to_string())),
+            None => report(Err("usage: --keyhelper-write-bundle <bundle path>".into())),
+        },
         "--keyhelper-request-access" => {
             // Runs as the logged-in user inside the helper bundle: macOS shows its Input
             // Monitoring prompt and adds "Hushboard Keyboard Helper" to the list.
@@ -753,21 +760,64 @@ fn signing_identity() -> String {
     if found { "Hushboard Dev".into() } else { "-".into() }
 }
 
-/// Build and sign the helper bundle in the app's temp folder (as the user, who has the signing
-/// key). Returns the bundle path.
-fn build_signed_bundle(staging_root: &Path) -> Result<std::path::PathBuf, Error> {
-    let os = |e: std::io::Error| Error::Os(e.to_string());
-    let exe = std::env::current_exe().map_err(os)?;
+fn write_bundle(bundle: &Path) -> std::io::Result<()> {
+    let exe = std::env::current_exe()?;
+    let _ = std::fs::remove_dir_all(bundle);
+    std::fs::create_dir_all(bundle.join("Contents/MacOS"))?;
+    std::fs::copy(&exe, bundle.join("Contents/MacOS/hushboard-keyhelper"))?;
+    std::fs::write(bundle.join("Contents/Info.plist"), info_plist())
+}
+
+fn embedded_bundle_for(exe: &Path) -> Option<std::path::PathBuf> {
+    let bundle = exe.parent()?.parent()?.join(EMBEDDED);
+    bundle.is_dir().then_some(bundle)
+}
+
+fn developer_signed(bundle: &Path) -> bool {
+    std::process::Command::new("/usr/bin/codesign")
+        .args(["--verify", "--strict", &format!("-R=anchor apple generic and identifier \"{LABEL}\"")])
+        .arg(bundle)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+fn copy_bundle(src: &Path, dst: &Path) -> Result<(), String> {
+    for rel in bundle_files(src)? {
+        let to = dst.join(&rel);
+        if let Some(parent) = to.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        std::fs::copy(src.join(&rel), &to).map_err(|e| format!("copy {}: {e}", rel.display()))?;
+    }
+    Ok(())
+}
+
+fn stage_bundle(staging_root: &Path) -> Result<std::path::PathBuf, Error> {
     let _ = std::fs::remove_dir_all(staging_root);
     let bundle = staging_root.join("Hushboard Keyboard Helper.app");
-    std::fs::create_dir_all(bundle.join("Contents/MacOS")).map_err(os)?;
-    std::fs::copy(&exe, bundle.join("Contents/MacOS/hushboard-keyhelper")).map_err(os)?;
-    std::fs::write(bundle.join("Contents/Info.plist"), info_plist()).map_err(os)?;
+    let embedded = std::env::current_exe()
+        .ok()
+        .and_then(|exe| embedded_bundle_for(&exe))
+        .filter(|b| developer_signed(b));
+    if let Some(embedded) = embedded {
+        copy_bundle(&embedded, &bundle).map_err(Error::Os)?;
+        return Ok(bundle);
+    }
+    build_signed_bundle(&bundle)?;
+    Ok(bundle)
+}
+
+/// Build and sign a helper bundle from the running executable (as the user, who has the signing
+/// key).
+fn build_signed_bundle(bundle: &Path) -> Result<(), Error> {
+    let os = |e: std::io::Error| Error::Os(e.to_string());
+    write_bundle(bundle).map_err(os)?;
 
     let identity = signing_identity();
     let signed = std::process::Command::new("/usr/bin/codesign")
         .args(["--force", "--sign", &identity, "--identifier", LABEL])
-        .arg(&bundle)
+        .arg(bundle)
         .output()
         .map_err(os)?;
     if !signed.status.success() {
@@ -776,12 +826,12 @@ fn build_signed_bundle(staging_root: &Path) -> Result<std::path::PathBuf, Error>
             String::from_utf8_lossy(&signed.stderr).trim()
         )));
     }
-    Ok(bundle)
+    Ok(())
 }
 
 pub fn install_from_app() -> Result<(), Error> {
     let staging_root = std::env::temp_dir().join(format!("hushboard-keyhelper-{}", std::process::id()));
-    let result = build_signed_bundle(&staging_root).and_then(|bundle| {
+    let result = stage_bundle(&staging_root).and_then(|bundle| {
         let digest = bundle_digest(&bundle).map_err(Error::Os)?;
         run_as_admin(
             &["--keyhelper-install", &bundle.to_string_lossy(), &digest],
@@ -820,4 +870,66 @@ pub fn open_input_monitoring() {
     let _ = std::process::Command::new("/usr/bin/open")
         .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")
         .status();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn scratch(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("keylock-test-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn finds_the_embedded_helper_next_to_the_app_executable() {
+        let root = scratch("embedded");
+        let contents = root.join("Hushboard.app/Contents");
+        std::fs::create_dir_all(contents.join("MacOS")).unwrap();
+        let exe = contents.join("MacOS/hushboard");
+        assert_eq!(embedded_bundle_for(&exe), None);
+
+        std::fs::create_dir_all(contents.join(EMBEDDED)).unwrap();
+        assert_eq!(embedded_bundle_for(&exe), Some(contents.join(EMBEDDED)));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn copied_bundle_keeps_every_file_and_the_executable_bit() {
+        let root = scratch("copy");
+        let src = root.join("src.app");
+        std::fs::create_dir_all(src.join("Contents/MacOS")).unwrap();
+        std::fs::create_dir_all(src.join("Contents/_CodeSignature")).unwrap();
+        std::fs::write(src.join("Contents/Info.plist"), info_plist()).unwrap();
+        std::fs::write(src.join("Contents/_CodeSignature/CodeResources"), "seal").unwrap();
+        let exe = src.join("Contents/MacOS/hushboard-keyhelper");
+        std::fs::write(&exe, "binary").unwrap();
+        std::fs::set_permissions(&exe, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let dst = root.join("dst.app");
+        copy_bundle(&src, &dst).unwrap();
+        assert_eq!(bundle_digest(&src).unwrap(), bundle_digest(&dst).unwrap());
+        let mode = std::fs::metadata(dst.join("Contents/MacOS/hushboard-keyhelper")).unwrap().permissions().mode();
+        assert_eq!(mode & 0o111, 0o111);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn ad_hoc_bundles_are_not_treated_as_developer_signed() {
+        let root = scratch("adhoc");
+        let bundle = root.join("Hushboard Keyboard Helper.app");
+        std::fs::create_dir_all(bundle.join("Contents/MacOS")).unwrap();
+        std::fs::copy("/usr/bin/true", bundle.join("Contents/MacOS/hushboard-keyhelper")).unwrap();
+        std::fs::write(bundle.join("Contents/Info.plist"), info_plist()).unwrap();
+        let signed = std::process::Command::new("/usr/bin/codesign")
+            .args(["--force", "--sign", "-", "--identifier", LABEL])
+            .arg(&bundle)
+            .status()
+            .unwrap();
+        assert!(signed.success());
+        assert!(!developer_signed(&bundle));
+        let _ = std::fs::remove_dir_all(root);
+    }
 }

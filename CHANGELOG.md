@@ -12,6 +12,7 @@ All notable changes to Hushboard are recorded here. The format follows [Keep a C
 - A soft launch sound, with a "Launch sound" switch in the panel. It stays quiet when Hushboard starts at login.
 - An Island section in the panel to set the island's width, corner radius and size, with a live preview while you adjust it. On Windows and Linux it styles the pill and the card.
 - Smoother state changes in the panel, the island and the lock screen.
+- Homebrew for macOS: `brew install --cask tekcify/tap/hushboard`. Uninstalling the cask removes the keyboard helper too.
 
 ### Fixed
 
@@ -21,6 +22,7 @@ All notable changes to Hushboard are recorded here. The format follows [Keep a C
 
 - The locked island is more compact: the lock status, the time left and the ways to unlock, with the keys you press taking the place of the caption while you type.
 - The panel's last section is now called Options.
+- The macOS keyboard helper ships inside the app, signed by Tekcify. Updating from 1.0.0 asks you to update the helper and switch it on in Input Monitoring once more; after that, updates keep it switched on.
 
 ## [1.0.0] - 2026-11-13
 

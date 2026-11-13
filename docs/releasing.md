@@ -49,6 +49,14 @@ Install at least the macOS build and lock once before publishing.
 
 Click **Publish release**. Check that the **Update feed** workflow succeeded: the `updater` release's `latest.json` should now show the new version.
 
+## Homebrew
+
+The cask lives in [tekcify/homebrew-tap](https://github.com/tekcify/homebrew-tap) (`brew install --cask tekcify/tap/hushboard`) and installs the release's `Hushboard_<v>_universal.dmg`. Upload the notarized DMG and its checksum before publishing, because the cask takes the DMG's SHA-256 from `SHA256SUMS.txt`.
+
+When a stable release is published, the **Update feed** workflow's `cask` job sets the cask's version and checksum and pushes to the tap. It needs a `HOMEBREW_TAP_TOKEN` secret: a fine-grained token with **Contents: read and write** on `tekcify/homebrew-tap` only. Without it the job skips, and betas never change the cask. The app updates itself, so the cask has `auto_updates true` and `brew upgrade` leaves installed copies alone.
+
+To update the cask by hand, change `version` and `sha256` in `Casks/hushboard.rb` and run `brew audit --cask --strict --online tekcify/tap/hushboard` before pushing.
+
 ## The update-signing key
 
 Every update file is signed with Hushboard's update key; the app refuses updates the key didn't sign. Its **public** half is in `src-tauri/tauri.conf.json` (`plugins.updater.pubkey`). The **private** half is:
@@ -90,7 +98,7 @@ HUSHBOARD_NOTARY_PROFILE=hushboard ./scripts/build-macos-signed.sh
 
 Set `TAURI_SIGNING_PRIVATE_KEY` (and its password) first if you also want the updater files.
 
-The keyboard helper is signed on the user's Mac when the app installs it, not at build time, so it stays ad-hoc signed until the app ships a pre-signed helper.
+Every macOS bundle step runs `scripts/bundle-mac-helper.mjs`, which builds the small `hushboard-keyhelper` binary from `crates/keylock`, wraps it in `Hushboard Keyboard Helper.app` and signs it with `APPLE_SIGNING_IDENTITY` (hardened runtime and timestamp), or ad-hoc when that isn't set. Tauri copies it to `Contents/Helpers/` and seals it into the app's signature, so notarizing the app covers it. When the app installs the helper, it uses this copy if it carries a Developer ID signature, which keeps the helper's Input Monitoring grant across updates. Ad-hoc builds fall back to signing a copy of the app's own executable on the user's Mac.
 
 For signed CI builds, add `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_API_ISSUER`, `APPLE_API_KEY` and `APPLE_API_KEY_PATH` (or `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`) secrets and pass them to `tauri-action` on the macOS job only.
 

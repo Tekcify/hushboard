@@ -6,6 +6,14 @@ Download the file for your system from the [latest release](https://github.com/t
 
 ## macOS (11 Big Sur or later, Apple Silicon or Intel)
 
+With [Homebrew](https://brew.sh), one command does steps 1 to 3:
+
+```bash
+brew install --cask tekcify/tap/hushboard
+```
+
+Without Homebrew:
+
 1. Download `Hushboard_<version>_universal.dmg` and open it.
 2. Drag **Hushboard** into **Applications**.
 3. Open Hushboard from Applications. macOS asks if you're sure you want to open an app downloaded from the internet. Click **Open**.
@@ -16,13 +24,15 @@ Then set up the keyboard helper from the panel (recommended, it makes the lock w
 5. Press **Install helper** and enter your Mac password.
 6. When macOS asks, click **Open System Settings** and switch on **Hushboard Keyboard Helper** under Input Monitoring. The panel shows **Ready** by itself.
 
-> macOS may ask you to switch the helper on again after an update.
+> Updating from 1.0.0 asks you to update the helper once and switch it on again, because it's now signed by Tekcify. After that, updates keep it switched on.
 
 **Uninstall:** quit Hushboard from its panel, move it from Applications to the Bin, then remove the helper:
 
 ```bash
 sudo "/Library/PrivilegedHelperTools/Hushboard Keyboard Helper.app/Contents/MacOS/hushboard-keyhelper" --keyhelper-uninstall
 ```
+
+If you installed with Homebrew, `brew uninstall --cask hushboard` removes the app and the helper. Add `--zap` to remove your settings too.
 
 ## Windows 10 and 11
 
