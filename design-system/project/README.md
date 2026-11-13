@@ -3,7 +3,9 @@ Hushboard is a small desktop app for macOS, Windows and Linux that locks the key
 ## Content fundamentals
 
 - Voice: calm, plain, brief. A helpful tool, not a security product. Second person ("Your mouse still works"), no "we".
-- Sentence case everywhere: buttons, titles, menu items. Uppercase only for `eyebrow` section labels.
+- Sentence case everywhere: buttons, titles, menu items, section labels. (`eyebrow` is uppercase only on the branded surfaces.)
+- Short, like the system's own settings. Labels are two or three words ("Cover the screen", "Open at login"); help text is one sentence; a switch already says on or off, so its row doesn't repeat it.
+- One fact per sentence, and the instruction before the reason: "Switch on Hushboard Keyboard Helper in Input Monitoring." not "In order for Hushboard to work, you need to…".
 - Say exactly what is blocked and what still works. "Key presses are being ignored. Your mouse and trackpad still work."
 - Always name the exit, in the same view as any lock state: "Hold to unlock", "Or press Ctrl + Alt + U".
 - Buttons are verb + object: "Lock keyboard", "Open System Settings", "Force unlock".
@@ -16,18 +18,27 @@ Real copy to reuse:
 | Where | Copy |
 | --- | --- |
 | Main action | Lock keyboard |
-| Arming | Locking in 3 s · Cancel |
+| Under it | Locks after 3 s · ⌃⌥U unlocks |
+| Arming | Hands off the keyboard · Cancel |
+| Status | Unlocked · Locking in 3 s · Locked · Setup needed |
+| Sections | Unlock after · Keyboards · While locked |
+| Settings | Cover the screen · Show the keys you press · Open at login |
 | Overlay headline | Wipe away |
 | Overlay line | Key presses are being ignored. Your mouse and trackpad still work. |
 | Unlock hint | Hold for 1.5 seconds with the mouse or trackpad |
 | After unlock | Keyboard unlocked |
 | Lock failed | Couldn't lock the keyboard. Hushboard needs Accessibility access. |
+| Helper off | Switch on Hushboard Keyboard Helper in Input Monitoring. Hushboard notices on its own. |
 
 ## Visual foundations
 
+**Two registers.** The everyday surfaces (the menu bar or tray panel, and the Linux window) are *native*: they borrow the system's materials, font and control sizes so Hushboard sits quietly beside the system's own menu bar extras, like Karabiner-Elements or Blip. On macOS the panel is the system's frosted popover material with the native window shadow, and its colours switch to the translucent `material-*` tokens so the frost shows through. The moments you look at while cleaning (the island, the lock overlay, the countdown) are *branded*: solid surfaces, the display face and the clay, readable at arm's length.
+
+**Native panel rules.** The `ui` family (the system font: SF Pro, Segoe UI, Ubuntu…) at 13 px; section labels at 11 px, semibold, sentence case; one rounded group per section with hairlines between rows; small switches and a 22 px segmented control; one 30 px primary button. Colour only marks state: clay on switches that are on, the Lock button and the locked status; `caution` and `danger` on the words that need them. No tinted rows, no icon tiles.
+
 **Colour.** The palette is Clay and sand: one brand hue, `seal` (a terracotta clay), and it means *locked*. Use it for the primary action, the hold fill, the countdown arc and selected states, and nowhere decorative. `suds` is its tint, used as the locked wash and swallowed keys, with `on-suds` text. Text on a `seal` fill is `on-seal`, never literal white (it is dark in the dark theme). Neutrals (`surface`, `surface-raised`, `surface-sunken`, `ink`, `ink-muted`) are warm sand and umber tones biased toward the clay. `caution` (an ochre, deliberately yellow so it never reads as the clay) marks arming and the final 10 s; `danger` (a crimson, cooler than the clay) marks errors and Force unlock. Both always come with words.
 
-**Type.** Three families. `display` (Bricolage Grotesque) appears only in `title-lg` and `title`. `sans` (Instrument Sans) for all UI text: `body`, `body-strong`, `label`, `caption`, `eyebrow`. `mono` (JetBrains Mono) for the `timer` and `keycap` styles, with tabular digits. Load all three from Google Fonts; in the packaged app, bundle the font files so it works offline.
+**Type.** Four families. `ui` is the system font, for the native panel and window. The branded surfaces use the other three. `display` (Bricolage Grotesque) appears only in `title-lg` and `title`. `sans` (Instrument Sans) for all UI text: `body`, `body-strong`, `label`, `caption`, `eyebrow`. `mono` (JetBrains Mono) for the `timer` and `keycap` styles, with tabular digits. Load all three from Google Fonts; in the packaged app, bundle the font files so it works offline.
 
 **Spacing.** 4 px grid: `space-1` through `space-12`. Panels pad `space-4`; sections sit `space-6` apart; the lock overlay uses `space-8` gaps and `space-12` outer padding.
 
@@ -50,7 +61,7 @@ Real copy to reuse:
 
 ## Iconography
 
-Hugeicons free set, stroke rounded: 24 px grid, 1.5 px stroke, round caps and joins, drawn in `currentColor` (MIT licence). The 25 icons this product uses are in the Icons group, with a table saying which icon goes where. Inline them as `<svg>` so they take the text colour (`ink`, or `on-seal` inside a primary button); through `<img>` they render black. Sizes: 18 px in buttons, 20 px in rows and HoldButton, 22 px in PermissionCard tiles. Never mix in another icon family; when you need a new icon, take it from the same Hugeicons set. It has no Linux glyph, so write "Linux" as text. There is no logo yet, so set the name in `title` type.
+Nucleo's free Glass set: 24 px grid, layered glass (a solid back shape, a frosted front, a light edge), so the icons echo the frosted panel they sit on. They're used everywhere inside the app, in `assets/IconsGlass/` with a table of which icon goes where, and are © Nucleo under the Nucleo license, not MIT (up to 100 icons in public source; read that folder's README before adding any). Always inline them through `icon()`, which gives each copy its own gradient ids. Colour comes from the `glass-*` tokens, not the text colour: neutral by default, clay where something is locked, ready or welcoming, crimson for a problem, and the fill's text colour on a solid button. Sizes: 14–15 px in buttons, 16 px in rows, 18–20 px in cards and the island. Never mix in another family inside the app; the one exception is the menu bar / tray icon, which macOS requires to be a single-colour template image. The brand mark is the Glass `Feather` (a feather duster).
 
 ## Components
 

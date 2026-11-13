@@ -10,10 +10,17 @@ declare global {
   interface Window {
     /** Set by Rust: "panel" (tray panel on macOS and Windows) or "window" (Linux). */
     __HB_SHELL?: "panel" | "window";
+    /** Set by Rust on macOS: the panel sits on the system's frosted popover material. */
+    __HB_MATERIAL?: "native";
   }
 }
-const SHELL = window.__HB_SHELL ?? (new URLSearchParams(location.search).get("shell") === "panel" ? "panel" : "window");
+const params = new URLSearchParams(location.search);
+const SHELL = window.__HB_SHELL ?? (params.get("shell") === "panel" ? "panel" : "window");
 document.documentElement.dataset.shell = SHELL;
+// In a browser, ?material=native previews the macOS panel (the material is faked in CSS).
+const MATERIAL = window.__HB_MATERIAL ?? (params.get("material") === "native" ? "native" : null);
+if (MATERIAL) document.documentElement.dataset.material = MATERIAL;
+if (!window.__HB_MATERIAL && MATERIAL) document.documentElement.dataset.materialPreview = "true";
 
 const DURATIONS: { secs: number | null; label: string }[] = [
   { secs: 30, label: "30 s" },
@@ -24,6 +31,8 @@ const DURATIONS: { secs: number | null; label: string }[] = [
 ];
 
 const ARM_DELAY_MS = timingMs("arm-delay");
+/** How much shorter than its content the tray panel is kept, so its middle can bounce (boot). */
+const BOUNCE_PX = 1;
 const CIRCUMFERENCE = 628.3;
 
 let settings: Settings = loadSettings();
@@ -48,12 +57,11 @@ function renderDurations() {
       `<button type="button" role="radio" data-i="${i}" aria-checked="${d.secs === settings.durationSecs}"
         tabindex="${d.secs === settings.durationSecs ? 0 : -1}">${d.label}</button>`,
   ).join("");
+  // The footer already says how to unlock early; only "Never" needs a word of its own.
   const note = $("dur-note");
   const keys = kbd(escapeKeys(perms?.platform ?? "macos"));
-  note.innerHTML =
-    settings.durationSecs == null
-      ? `Unlock with the button on screen or ${keys}`
-      : `The keyboard unlocks by itself. You can also hold the button on screen or press ${keys}`;
+  note.hidden = settings.durationSecs != null;
+  note.innerHTML = `Stays locked until you hold the on-screen button or press ${keys}.`;
 }
 
 $("durations").addEventListener("click", (e) => {
@@ -89,7 +97,7 @@ const KIND_LABEL: Record<Keyboard["kind"], string> = {
   usb: "USB",
   bluetooth: "Bluetooth",
   other: "Keyboard",
-  all: "Every connected keyboard",
+  all: "All keyboards",
 };
 
 function selectedIds(): string[] {
@@ -104,16 +112,15 @@ function renderKeyboards() {
 
   if (keyboards.length === 0) {
     box.innerHTML = `<div class="hb-device hb-device--static"><span class="hb-device__icon">${icon("keyboard")}</span>
-      <span><span class="hb-device__name">No keyboards found</span><br><span class="hb-device__meta">Plug one in or check input device access</span></span><span></span></div>`;
+      <span><span class="hb-device__name">No keyboards found</span><br><span class="hb-device__meta">Plug one in, or check input access.</span></span><span></span></div>`;
     note.hidden = true;
     return;
   }
 
   if (allAtOnce) {
     box.innerHTML = `<div class="hb-device hb-device--static"><span class="hb-device__icon">${icon("keyboard")}</span>
-      <span><span class="hb-device__name">All keyboards</span><br><span class="hb-device__meta">Built-in and external</span></span><span></span></div>`;
-    note.hidden = false;
-    note.textContent = "This system locks every keyboard at once.";
+      <span><span class="hb-device__name">All keyboards</span><br><span class="hb-device__meta">Built-in and external, locked together</span></span><span></span></div>`;
+    note.hidden = true;
     return;
   }
 
@@ -127,15 +134,15 @@ function renderKeyboards() {
   box.innerHTML = keyboards
     .map((k) => {
       const on = sel.has(k.id);
-      const meta = `${KIND_LABEL[k.kind]} · ${on ? "will be locked" : "stays active"}`;
+      const meta = on ? KIND_LABEL[k.kind] : `${KIND_LABEL[k.kind]} · stays on`;
       return `<button class="hb-device" type="button" role="checkbox" aria-checked="${on}" data-id="${escapeHtml(k.id)}">
         <span class="hb-device__icon">${icon(KIND_ICON[k.kind])}</span>
         <span><span class="hb-device__name">${escapeHtml(k.name)}</span><br><span class="hb-device__meta">${meta}</span></span>
         <span class="hb-switch" aria-hidden="true" aria-checked="${on}"></span></button>`;
     })
     .join("");
-  note.hidden = sel.size !== keyboards.length;
-  note.textContent = "Every keyboard will be locked. Unlock with the mouse or trackpad.";
+  // The switches already show which keyboards lock, so there's nothing to add here.
+  note.hidden = true;
 }
 
 $("devices").addEventListener("click", (e) => {
@@ -153,8 +160,8 @@ $("devices").addEventListener("click", (e) => {
 
 // ---------- While locked ----------
 const SETTINGS_ROWS: { key: "coverScreen" | "showKeys"; label: string; icon: IconName }[] = [
-  { key: "coverScreen", label: "Cover the screen while locked", icon: "moon-02" },
-  { key: "showKeys", label: "Show keys I press while locked", icon: "keyboard" },
+  { key: "coverScreen", label: "Cover the screen", icon: "moon-02" },
+  { key: "showKeys", label: "Show the keys you press", icon: "keyboard" },
 ];
 
 /** Start at login is the OS's setting, not ours: read and written through the app. */
@@ -166,7 +173,7 @@ function renderSettings() {
       <button class="hb-switch" id="set-${key}" type="button" role="switch" aria-checked="${on}" data-key="${key}"></button></label>`;
   $("settings").innerHTML =
     SETTINGS_ROWS.map((r) => row(r.key, r.label, r.icon, settings[r.key])).join("") +
-    row("autostart", "Start Hushboard at login", "login-03", autostart);
+    row("autostart", "Open at login", "login-03", autostart);
 }
 
 $("settings").addEventListener("click", async (e) => {
@@ -202,18 +209,23 @@ function renderWelcome(platform: string) {
   }
   const where =
     platform === "macos"
-      ? "Hushboard lives in your menu bar: click the keyboard icon to open this panel, or right-click it for quick locks."
+      ? "Click the keyboard in the menu bar to open this panel, or right-click it to lock in one step."
       : platform === "windows"
-        ? "Hushboard lives in the system tray (you may need the ^ arrow to see it): click the keyboard icon to open this panel, right-click for quick locks."
-        : "Hushboard adds an icon to your panel with quick locks, and keeps this window for everything else.";
+        ? "Click the keyboard in the system tray to open this panel, or right-click it to lock in one step. If you don't see it, try the ^ arrow."
+        : "Use the keyboard icon in your panel to lock in one step, or this window for everything else.";
   box.innerHTML = `
     <span class="hb-perm__icon">${icon("sparkles")}</span>
     <div class="hb-perm__body">
       <div class="hb-perm__title" id="welcome-title">Welcome to Hushboard</div>
-      <p class="hb-perm__text">${where} Pick how long to lock, press Lock keyboard, and wipe away. Hold the on-screen button or press ${escapeKeys(platform).join(platform === "macos" ? "" : " + ")} to unlock early.</p>
+      <p class="hb-perm__text">${where}</p>
       <div class="hb-row">
-        <button class="hb-btn hb-btn--primary" type="button" id="welcome-autostart">Start at login</button>
-        <button class="hb-btn hb-btn--ghost" type="button" id="welcome-done">Got it</button>
+        ${
+          // Already opening at login (the settings switch is on): just let them dismiss it.
+          autostart
+            ? `<button class="hb-btn hb-btn--secondary" type="button" id="welcome-done">Got it</button>`
+            : `<button class="hb-btn hb-btn--primary" type="button" id="welcome-autostart">Open at login</button>
+               <button class="hb-btn hb-btn--ghost" type="button" id="welcome-done">Not now</button>`
+        }
       </div>
     </div>`;
   box.hidden = false;
@@ -226,7 +238,7 @@ function renderWelcome(platform: string) {
     box.hidden = true;
   };
   $("welcome-done").addEventListener("click", done);
-  $("welcome-autostart").addEventListener("click", async () => {
+  $("welcome-autostart")?.addEventListener("click", async () => {
     autostart = await api.setAutostart(true).catch(() => autostart);
     renderSettings();
     done();
@@ -244,7 +256,7 @@ function renderUpdate(update: UpdateInfo | null, message?: string) {
     ? `<span class="hb-perm__icon">${icon("circle-arrow-reload-01")}</span>
       <div class="hb-perm__body">
         <div class="hb-perm__title">Update available <span class="hb-pill hb-pill--locked">${escapeHtml(update.version)}</span></div>
-        <p class="hb-perm__text">${update.notes ? escapeHtml(update.notes.split("\n")[0]) : `You have ${escapeHtml(update.currentVersion)}.`}</p>
+        <p class="hb-perm__text">You have ${escapeHtml(update.currentVersion)}.</p>
         <div class="hb-row">
           <button class="hb-btn hb-btn--primary" type="button" id="update-install">Install and restart</button>
           <button class="hb-btn hb-btn--ghost" type="button" id="update-later">Later</button>
@@ -277,7 +289,7 @@ async function checkForUpdatesNow() {
     const update = await api.checkForUpdate();
     renderUpdate(update, update ? undefined : "Hushboard is up to date.");
   } catch (err) {
-    renderUpdate(null, `Couldn't check for updates: ${String(err)}`);
+    renderUpdate(null, `Couldn't check for updates. ${String(err)}`);
   }
 }
 
@@ -288,9 +300,9 @@ function permissionCards(p: Permissions): string {
     `<div class="hb-perm ${granted ? "hb-perm--granted" : "hb-perm--blocked"}">
       <span class="hb-perm__icon">${icon(granted ? "shield-check" : "shield-alert")}</span>
       <div class="hb-perm__body">
-        <div class="hb-perm__title">${title} <span class="hb-pill ${granted ? "hb-pill--locked" : "hb-pill--error"}">${granted ? "Allowed" : "Not allowed"}</span></div>
+        <div class="hb-perm__title">${title} <span class="hb-pill ${granted ? "hb-pill--locked" : "hb-pill--error"}">${granted ? "Allowed" : "Off"}</span></div>
         <p class="hb-perm__text">${text}</p>
-        ${granted ? "" : `<div class="hb-row">${action}<button class="hb-btn hb-btn--ghost" type="button" data-action="recheck">${icon("circle-arrow-reload-01")}Check again</button></div>`}
+        ${granted ? "" : `<div class="hb-row">${action}<button class="hb-btn hb-btn--ghost" type="button" data-action="recheck">Check again</button></div>`}
       </div></div>`;
 
   if (p.platform === "macos") {
@@ -301,17 +313,17 @@ function permissionCards(p: Permissions): string {
   }
   // Without the helper, macOS falls back to an event tap that needs these two.
   if (p.platform === "macos" && p.helper !== "ready") {
-    const open = `<button class="hb-btn hb-btn--primary" type="button" data-action="request">Open System Settings</button>`;
+    const open = `<button class="hb-btn hb-btn--primary" type="button" data-action="request">Open Settings</button>`;
     if (p.accessibility === "denied")
-      cards.push(card("Accessibility access", "macOS only lets an app block key presses after you allow it in System Settings → Privacy &amp; Security → Accessibility.", false, open));
+      cards.push(card("Accessibility", "Lets Hushboard block key presses. Privacy &amp; Security → Accessibility.", false, open));
     if (p.inputMonitoring === "denied")
-      cards.push(card("Input Monitoring", "Hushboard sees key presses so it can drop them while you clean. Nothing is recorded.", false, open));
+      cards.push(card("Input Monitoring", "Lets Hushboard see key presses to drop them. Nothing is recorded.", false, open));
   }
   if (p.platform === "linux" && p.inputDevices === "denied") {
     cards.push(
       card(
-        "Input device access",
-        "Hushboard locks keyboards directly through the input device. Add yourself to the <code>input</code> group (<code>sudo usermod -aG input $USER</code>), then log out and back in.",
+        "Input devices",
+        "Add yourself to the <code>input</code> group, then log out and back in: <code>sudo usermod -aG input $USER</code>",
         false,
         "",
       ),
@@ -333,27 +345,27 @@ function helperCard(p: Permissions): string {
 
   switch (p.helper) {
     case "ready":
-      return body("Ready", "hb-pill--locked", "Hushboard locks the keyboard hardware itself, so other apps can't get in the way.", "", true);
+      return body("Ready", "hb-pill--locked", "Locks the keyboard hardware, so no app can get in the way.", "", true);
     case "needs-approval":
       return body(
-        "Needs approval",
+        "Turn on",
         "hb-pill--arming",
-        "One more step: in System Settings → Privacy &amp; Security → Input Monitoring, switch on <b>Hushboard Keyboard Helper</b>. Hushboard notices on its own once you do.",
+        "Switch on <b>Hushboard Keyboard Helper</b> in Input Monitoring. Hushboard notices on its own.",
         `<button class="hb-btn hb-btn--primary" type="button" data-action="helper-settings">Open Input Monitoring</button>
-         <button class="hb-btn hb-btn--ghost" type="button" data-action="helper-prompt">Show the prompt again</button>`,
+         <button class="hb-btn hb-btn--ghost" type="button" data-action="helper-prompt">Ask again</button>`,
       );
     case "outdated":
       return body(
-        "Update needed",
+        "Update",
         "hb-pill--arming",
-        "The installed helper is from an older version of Hushboard. Updating asks for your Mac password.",
+        "This helper is from an older Hushboard. Updating asks for your password.",
         `<button class="hb-btn hb-btn--primary" type="button" data-action="install-helper">Update helper</button>`,
       );
     default:
       return body(
         "Not installed",
         "",
-        "Locks the keyboard hardware itself, so it works even when macOS or another app is holding secure keyboard entry, and lets you lock just the built-in keyboard. Installing asks for your Mac password once.",
+        "Locks the keyboard hardware, so it works with password fields open and can lock the built-in keyboard alone. Asks for your password once.",
         `<button class="hb-btn hb-btn--primary" type="button" data-action="install-helper">Install helper</button>`,
       );
   }
@@ -364,12 +376,12 @@ function secureInputCard(holder: string): string {
   const name = escapeHtml(holder);
   const text =
     holder === "loginwindow"
-      ? "macOS is stuck in secure keyboard entry, which hides key presses from Hushboard. Lock the screen with <b>Ctrl + Cmd + Q</b> and log back in (or log out and in). Installing the keyboard helper avoids this."
-      : `<b>${name}</b> has secure keyboard entry on (usually a focused password field), which hides key presses from Hushboard. Close it or switch it off; Hushboard notices on its own.`;
+      ? "macOS is stuck in secure keyboard entry, which hides key presses. Lock the screen (⌃⌘Q) and log back in, or install the keyboard helper."
+      : `<b>${name}</b> has secure keyboard entry on, usually from a focused password field. Close it or switch it off.`;
   return `<div class="hb-perm hb-perm--blocked">
       <span class="hb-perm__icon">${icon("alert-02")}</span>
       <div class="hb-perm__body">
-        <div class="hb-perm__title">Secure keyboard entry <span class="hb-pill hb-pill--error">Blocking</span></div>
+        <div class="hb-perm__title">Secure keyboard entry <span class="hb-pill hb-pill--error">On</span></div>
         <p class="hb-perm__text">${text}</p>
       </div></div>`;
 }
@@ -395,7 +407,7 @@ $("perms").addEventListener("click", async (e) => {
   if (action === "helper-prompt") await api.requestHelperAccess();
   if (action === "install-helper") {
     b.disabled = true;
-    b.textContent = "Waiting for your password…";
+    b.textContent = "Waiting for password…";
     permsHtml = ""; // let the next update redraw the card even if nothing else changed
     try {
       await api.installHelper();
@@ -440,10 +452,10 @@ function renderStatus() {
   const map: Record<LockState["phase"], [string, string]> = {
     idle: ["hb-pill", "Unlocked"],
     arming: ["hb-pill hb-pill--arming", `Locking in ${Math.ceil((state.armingMsLeft ?? 0) / 1000)} s`],
-    locked: ["hb-pill hb-pill--locked", "Keyboard locked"],
+    locked: ["hb-pill hb-pill--locked", "Locked"],
   };
   let [cls, text] = map[state.phase];
-  if (state.phase === "idle" && perms && !perms.allGranted) [cls, text] = ["hb-pill hb-pill--error", "Needs permission"];
+  if (state.phase === "idle" && perms && !perms.allGranted) [cls, text] = ["hb-pill hb-pill--error", "Setup needed"];
   pill.className = cls;
   pill.textContent = text;
 }
@@ -458,8 +470,8 @@ let footerPhase: string | null = null;
 
 /** Why the Lock button is disabled, in one line, or null when it can lock. */
 function lockBlockedReason(): string | null {
-  if (!perms) return "Checking what this Mac allows…";
-  if (perms.helper === "needs-approval") return "Switch on Hushboard Keyboard Helper in Input Monitoring to lock";
+  if (!perms) return "Checking permissions…";
+  if (perms.helper === "needs-approval") return "Turn on the keyboard helper to lock";
   if (perms.helper === "outdated") return "Update the keyboard helper to lock";
   // With the macOS helper ready, the helper does the locking: the app's own Accessibility and
   // Input Monitoring (and secure keyboard entry) only matter to the no-helper fallback. Gating
@@ -468,7 +480,7 @@ function lockBlockedReason(): string | null {
     const blocked = fallbackBlockedReason(perms);
     if (blocked) return blocked;
   }
-  if (!keyboards.some((k) => k.kind === "all") && selectedIds().length === 0) return "Choose at least one keyboard to lock";
+  if (!keyboards.some((k) => k.kind === "all") && selectedIds().length === 0) return "Choose a keyboard to lock";
   return null;
 }
 
@@ -480,8 +492,8 @@ function fallbackBlockedReason(perms: Permissions): string | null {
       : `${perms.secureInputHolder} is holding secure keyboard entry`;
   if (perms.accessibility === "denied" || perms.inputMonitoring === "denied")
     return "Allow Accessibility and Input Monitoring to lock";
-  if (perms.inputDevices === "denied") return "Hushboard needs access to input devices to lock";
-  if (!perms.allGranted) return "A permission is missing";
+  if (perms.inputDevices === "denied") return "Allow input device access to lock";
+  if (!perms.allGranted) return "Finish setup to lock";
   return null;
 }
 
@@ -500,7 +512,7 @@ function renderFooter() {
           <circle class="hb-countdown__arc" id="arm-arc" cx="110" cy="110" r="100" stroke-dasharray="${CIRCUMFERENCE}" style="stroke:var(--caution)"/></svg>
           <div class="hb-countdown__center"><span class="hb-countdown__time" id="arm-time"></span></div>
         </div>
-        <div class="app__arming-text"><span class="body-strong">Lift your hands from the keyboard</span>
+        <div class="app__arming-text"><span class="body-strong">Hands off the keyboard</span>
           <button class="hb-btn hb-btn--secondary" type="button" id="cancel">${icon("cancel-01")}Cancel</button></div>
       </div>`;
       $("cancel").addEventListener("click", () => api.unlock());
@@ -510,8 +522,8 @@ function renderFooter() {
     $("arm-arc").setAttribute("stroke-dashoffset", String(offset));
   } else if (state.phase === "locked") {
     if (footerPhase !== "locked") {
-      const where = settings.coverScreen ? "the full-screen view" : "the island at the top of the screen";
-      footer.innerHTML = `<p class="caption">The keyboard is locked. Unlock from ${where}, or press ${kbd(escapeKeys(perms?.platform ?? "macos"))}</p>`;
+      const where = settings.coverScreen ? "the cover" : perms?.platform === "macos" ? "the island" : "the bar at the top";
+      footer.innerHTML = `<p class="caption">Locked. Unlock from ${where} or press ${kbd(escapeKeys(perms?.platform ?? "macos"))}</p>`;
     }
   } else {
     const escape = escapeKeys(perms?.platform ?? "macos").join(perms?.platform === "macos" ? "" : " + ");
@@ -519,12 +531,12 @@ function renderFooter() {
       ${icon("square-lock-02")}Lock keyboard</button>
       ${
         canLock
-          ? `<p class="caption">Starts after ${ARM_DELAY_MS / 1000} s · ${escapeHtml(escape)} always unlocks</p>`
+          ? `<p class="caption">Locks after ${ARM_DELAY_MS / 1000} s · ${escapeHtml(escape)} unlocks</p>`
           : `<p class="caption app__why" id="lock-why">${escapeHtml(blocked)}</p>`
       }
       <div class="app__links">
-        <button class="hb-btn hb-btn--ghost" type="button" id="check-updates">v${escapeHtml(appVersion)} · Check for updates</button>
-        <button class="hb-btn hb-btn--ghost app__quit" type="button" id="quit">Quit Hushboard</button>
+        <button class="hb-btn hb-btn--ghost" type="button" id="check-updates" title="Check for updates">Version ${escapeHtml(appVersion)}</button>
+        <button class="hb-btn hb-btn--ghost app__quit" type="button" id="quit">Quit</button>
       </div>`;
     $("lock").addEventListener("click", startLock);
     $("check-updates").addEventListener("click", checkForUpdatesNow);
@@ -598,15 +610,30 @@ async function boot() {
 
   if (SHELL === "panel") {
     // macOS: a caret at the top of the panel pointing at the menu bar icon, as menu bar apps do.
-    await api.onPanelCaret((caret) => {
+    const applyCaret = (x: number | null) => {
       const rootEl = document.documentElement;
-      if (caret) {
-        rootEl.style.setProperty("--caret-x", `${caret.x}px`);
+      if (x != null) {
+        rootEl.style.setProperty("--caret-x", `${x}px`);
         rootEl.dataset.caret = "top";
       } else {
         delete rootEl.dataset.caret;
       }
-    });
+    };
+    // Grow to fit the screen, not a fixed height: the card is capped at the room the screen has
+    // (app.css), and only the middle section scrolls, and only when the screen is too short.
+    const applyRoom = (height: number) => {
+      document.documentElement.style.setProperty("--panel-room", `${Math.floor(height)}px`);
+      window.dispatchEvent(new Event("hb-panel-room")); // re-fit (below) for the new room
+    };
+    await api.onPanelCaret((caret) => applyCaret(caret ? caret.x : null));
+    await api.onPanelRoom(applyRoom);
+    // The panel may have been placed before this page was listening (it opens at launch):
+    // ask, so the content lines up with the frosted shape and its pointer from the start.
+    const layout = await api.panelLayout().catch(() => null);
+    if (layout) {
+      applyCaret(layout.caret);
+      applyRoom(layout.room);
+    }
     // Open and close animations (app.css). Re-adding the attribute restarts the open animation
     // even if the previous one hadn't finished.
     const rootEl = document.documentElement;
@@ -621,17 +648,44 @@ async function boot() {
     document.body.addEventListener("animationend", (e) => {
       if (e.target === document.body && rootEl.dataset.panel === "opening") delete rootEl.dataset.panel;
     });
-    // Size the panel window to its card, whenever the content changes height.
+    // Scroll edges (app.css): flag when there's content hidden above or below the middle section.
     const card = $("app");
-    let last = 0;
-    new ResizeObserver(() => {
-      // The card's bottom edge (which includes the room above it for the caret) + the shadow margin.
-      const height = Math.ceil(card.getBoundingClientRect().bottom) + 10;
-      if (height !== last) {
-        last = height;
+    const scroller = card.querySelector<HTMLElement>(".app__body")!;
+    // The 1 px the window is kept short by (below) shouldn't count as "more to see".
+    const markScroll = () => {
+      const below = scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > BOUNCE_PX + 1;
+      card.toggleAttribute("data-scrolled", scroller.scrollTop > BOUNCE_PX + 1);
+      card.toggleAttribute("data-more-below", below);
+    };
+    scroller.addEventListener("scroll", markScroll, { passive: true });
+
+    // Size the window to the card. The middle section is the only thing that scrolls, and
+    // macOS only gives a scroll area its elastic bounce when it has something to scroll, so the
+    // window is kept BOUNCE_PX shorter than the content: the middle always scrolls by that much
+    // (nothing visible is cut) and bounces inside its box, while the header, footer and frosted
+    // frame stay put. The natural height comes from the content (scrollHeight), not the card's
+    // current box, which is capped by the window and would otherwise never grow back.
+    const fit = () => {
+      markScroll();
+      const style = getComputedStyle(card);
+      const natural = card.offsetHeight - scroller.clientHeight + scroller.scrollHeight;
+      const room = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--panel-room")) || 900;
+      const cardHeight = Math.min(natural - BOUNCE_PX, room - 26);
+      const height = Math.ceil(parseFloat(style.marginTop) + cardHeight + parseFloat(style.marginBottom));
+      document.documentElement.style.setProperty("--panel-card", `${cardHeight}px`);
+      if (height !== lastFit) {
+        lastFit = height;
         api.fitPanel(height);
       }
-    }).observe(card);
+    };
+    let lastFit = 0;
+    window.addEventListener("hb-panel-room", fit);
+    fit();
+    const sizes = new ResizeObserver(fit);
+    sizes.observe(card);
+    sizes.observe(scroller);
+    // Each section in the middle: a card appearing changes the content's height.
+    for (const child of Array.from(scroller.children)) sizes.observe(child);
     // Esc closes the panel, like any menu.
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape") api.hidePanel();

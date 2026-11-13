@@ -495,6 +495,13 @@ fn fit_panel(app: AppHandle, height: f64) {
     shell::fit_panel(&app, height);
 }
 
+/// Where the tray panel was last placed (pointer and room), for a page that loaded after the
+/// placement events were sent. None before the first placement.
+#[tauri::command]
+fn panel_layout() -> Option<shell::PanelLayout> {
+    shell::panel_layout()
+}
+
 #[tauri::command]
 fn hide_panel(app: AppHandle) {
     shell::hide_panel(&app);
@@ -553,6 +560,7 @@ pub fn run() {
             unlock,
             set_prefs,
             fit_panel,
+            panel_layout,
             hide_panel,
             quit_app,
             updates::check_for_update,
