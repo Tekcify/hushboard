@@ -18,6 +18,10 @@
 </p>
 
 <p align="center">
+  On a Mac with Homebrew: <code>brew install --cask tekcify/tap/hushboard</code>
+</p>
+
+<p align="center">
   Free and open source (MIT) · <a href="docs/installing.md">Install guide</a> · <a href="CHANGELOG.md">What's new</a>
 </p>
 
