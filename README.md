@@ -8,13 +8,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/tekcify/hushboard/releases/latest"><img src="docs/images/download-macos.svg" alt="Download for macOS" height="60"></a>
-  <a href="https://github.com/tekcify/hushboard/releases/latest"><img src="docs/images/download-windows.svg" alt="Download for Windows" height="60"></a>
-  <a href="https://github.com/tekcify/hushboard/releases/latest"><img src="docs/images/download-linux.svg" alt="Download for Linux" height="60"></a>
+  <a href="https://github.com/tekcify/hushboard/releases/latest"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/download-macos-dark.svg"><img src="docs/images/download-macos.svg" alt="Download for macOS" height="56"></picture></a>
+  <a href="https://github.com/tekcify/hushboard/releases/latest"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/download-windows-dark.svg"><img src="docs/images/download-windows.svg" alt="Download for Windows" height="56"></picture></a>
+  <a href="https://github.com/tekcify/hushboard/releases/latest"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/download-linux-dark.svg"><img src="docs/images/download-linux.svg" alt="Download for Linux" height="56"></picture></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/tekcify/hushboard"><img src="docs/images/star.svg" alt="Star Hushboard on GitHub" height="44"></a>
+  <a href="https://github.com/tekcify/hushboard"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/star-dark.svg"><img src="docs/images/star.svg" alt="Star Hushboard on GitHub" height="40"></picture></a>
 </p>
 
 <p align="center">
