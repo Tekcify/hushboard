@@ -2,22 +2,21 @@
 
 Download the file for your system from the [latest release](https://github.com/tekcify/hushboard/releases). Each release lists a `SHA256SUMS.txt` to check your download against.
 
-> **Hushboard isn't signed by Apple or Microsoft yet.** Your system will warn you the first time you open Hushboard. The steps below get past that safely. Signed builds are planned. Once Hushboard is installed, it updates itself, and updates are signed by the Hushboard team and checked before installing.
+> **The macOS app is signed and notarized by Apple.** The Windows installer isn't signed by Microsoft yet, so Windows warns you the first time you run it. The steps below get past that safely. Once Hushboard is installed, it updates itself, and updates are signed by the Hushboard team and checked before installing.
 
 ## macOS (11 Big Sur or later, Apple Silicon or Intel)
 
 1. Download `Hushboard_<version>_universal.dmg` and open it.
 2. Drag **Hushboard** into **Applications**.
-3. Open Hushboard from Applications. macOS says it "can't be opened because Apple cannot check it for malicious software". Click **Done** (not Move to Bin).
-4. Open **System Settings → Privacy & Security**, scroll down to the message about Hushboard, and click **Open Anyway**. Confirm with your password or Touch ID.
-5. Hushboard opens a short welcome tour. When it ends, the panel opens under the keyboard icon in the menu bar. There's no Dock icon. You can replay the tour from the icon's right-click menu.
+3. Open Hushboard from Applications. macOS asks if you're sure you want to open an app downloaded from the internet. Click **Open**.
+4. Hushboard opens a short welcome tour. When it ends, the panel opens under the keyboard icon in the menu bar. There's no Dock icon. You can replay the tour from the icon's right-click menu.
 
 Then set up the keyboard helper from the panel (recommended, it makes the lock work everywhere):
 
-6. Press **Install helper** and enter your Mac password.
-7. When macOS asks, click **Open System Settings** and switch on **Hushboard Keyboard Helper** under Input Monitoring. The panel shows **Ready** by itself.
+5. Press **Install helper** and enter your Mac password.
+6. When macOS asks, click **Open System Settings** and switch on **Hushboard Keyboard Helper** under Input Monitoring. The panel shows **Ready** by itself.
 
-> **Until builds are signed,** macOS may ask you to switch the helper on again after an update.
+> macOS may ask you to switch the helper on again after an update.
 
 **Uninstall:** quit Hushboard from its panel, move it from Applications to the Bin, then remove the helper:
 
