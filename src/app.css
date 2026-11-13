@@ -166,10 +166,10 @@ html[data-platform="macos"][data-notch="true"] { --island-notch: 200px; --island
 html[data-platform="macos"][data-notch="false"] { --island-pad: 32px 22px 18px; }
 
 /* Windows: a floating pill (the window leaves 8–10 px for its shadow). */
-html[data-platform="windows"] { --island-bg: #202020; --island-radius: 999px; --ring: 44px; }
+html[data-platform="windows"] { --island-bg: #1f1a16; --island-radius: 999px; --ring: 44px; }
 html[data-platform="windows"] .island { padding: 8px 10px 16px; box-sizing: border-box; }
 html[data-platform="windows"] .island__bar,
-html[data-platform="windows"] .island__locked { border: 1px solid #3a3a3a; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45); }
+html[data-platform="windows"] .island__locked { border: 1px solid #3a322b; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45); }
 html[data-platform="windows"] .island__locked { grid-template-columns: auto 1fr auto; grid-template-rows: auto; padding: 0 8px 0 10px; }
 html[data-platform="windows"] .island__ring { grid-row: auto; }
 html[data-platform="windows"] .island__info { align-self: center; gap: 0; }

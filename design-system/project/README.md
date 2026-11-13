@@ -25,7 +25,7 @@ Real copy to reuse:
 
 ## Visual foundations
 
-**Colour.** One brand hue, `seal` (a deep teal), and it means *locked*. Use it for the primary action, the hold fill, the countdown arc and selected states, and nowhere decorative. `suds` is its tint, used as the locked wash and swallowed keys, with `on-suds` text. Text on a `seal` fill is `on-seal`, never literal white (it is dark in the dark theme). Neutrals (`surface`, `surface-raised`, `surface-sunken`, `ink`, `ink-muted`) are cool greys biased toward the teal. `caution` marks arming and the final 10 s, `danger` marks errors and Force unlock. Both always come with words.
+**Colour.** The palette is Clay and sand: one brand hue, `seal` (a terracotta clay), and it means *locked*. Use it for the primary action, the hold fill, the countdown arc and selected states, and nowhere decorative. `suds` is its tint, used as the locked wash and swallowed keys, with `on-suds` text. Text on a `seal` fill is `on-seal`, never literal white (it is dark in the dark theme). Neutrals (`surface`, `surface-raised`, `surface-sunken`, `ink`, `ink-muted`) are warm sand and umber tones biased toward the clay. `caution` (an ochre, deliberately yellow so it never reads as the clay) marks arming and the final 10 s; `danger` (a crimson, cooler than the clay) marks errors and Force unlock. Both always come with words.
 
 **Type.** Three families. `display` (Bricolage Grotesque) appears only in `title-lg` and `title`. `sans` (Instrument Sans) for all UI text: `body`, `body-strong`, `label`, `caption`, `eyebrow`. `mono` (JetBrains Mono) for the `timer` and `keycap` styles, with tabular digits. Load all three from Google Fonts; in the packaged app, bundle the font files so it works offline.
 
