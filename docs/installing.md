@@ -43,7 +43,7 @@ Pick the package for your distribution:
 | File | Install |
 | --- | --- |
 | `Hushboard_<version>_amd64.deb` (Ubuntu, Debian, Mint, Pop!_OS) | `sudo apt install ./Hushboard_<version>_amd64.deb` |
-| `Hushboard-<version>-1.x86_64.rpm` (Fedora, openSUSE) | `sudo dnf install ./Hushboard-<version>-1.x86_64.rpm` |
+| `Hushboard-<version>-1.x86_64.rpm` (Fedora, openSUSE). Stable releases only; during the beta, use the AppImage | `sudo dnf install ./Hushboard-<version>-1.x86_64.rpm` |
 | `Hushboard_<version>_amd64.AppImage` (any distribution) | `chmod +x Hushboard_*.AppImage`, then run it |
 
 Hushboard needs read access to your keyboards. Add yourself to the `input` group once, then log out and back in:

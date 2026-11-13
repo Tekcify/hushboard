@@ -17,7 +17,7 @@ First public beta.
 - Menu bar and tray app: a panel that opens under its icon (with a caret on macOS) and stays clear of the Dock or taskbar, a quick-lock menu, and a live tray icon.
 - Island while locked: grows from the notch on macOS, a floating pill on Windows, a centred card on Linux; optional full-screen cover.
 - Live system watcher: permissions (including revocation), helper state, keyboards and secure input update the UI as they change.
-- Installers: universal macOS `.dmg`, Windows per-user `.exe` (NSIS), Linux AppImage, `.deb` and `.rpm`, built by the release workflow onto a draft GitHub Release with `SHA256SUMS.txt`.
+- Installers: universal macOS `.dmg`, Windows per-user `.exe` (NSIS), Linux AppImage and `.deb` (plus `.rpm` from the first stable release; RPM versions can't contain `-`), built by the release workflow onto a draft GitHub Release with `SHA256SUMS.txt`.
 - In-app updates: signed with Hushboard's update key and verified before installing, checked shortly after launch and every 6 hours (never during a lock), with an "Update available" card and "Check for updates".
 - Start at login (stays in the menu bar or tray without opening the panel) and a first-run welcome.
 - Hushboard design system (tokens, components, Hugeicons icon set), install guide and release runbook.
