@@ -49,6 +49,14 @@ Install at least the macOS build and lock once before publishing.
 
 Click **Publish release**. Check that the **Update feed** workflow succeeded: the `updater` release's `latest.json` should now show the new version.
 
+## Homebrew
+
+The cask lives in [tekcify/homebrew-tap](https://github.com/tekcify/homebrew-tap) (`brew install --cask tekcify/tap/hushboard`) and installs the release's `Hushboard_<v>_universal.dmg`. Upload the notarized DMG and its checksum before publishing, because the cask takes the DMG's SHA-256 from `SHA256SUMS.txt`.
+
+When a stable release is published, the **Update feed** workflow's `cask` job sets the cask's version and checksum and pushes to the tap. It needs a `HOMEBREW_TAP_TOKEN` secret: a fine-grained token with **Contents: read and write** on `tekcify/homebrew-tap` only. Without it the job skips, and betas never change the cask. The app updates itself, so the cask has `auto_updates true` and `brew upgrade` leaves installed copies alone.
+
+To update the cask by hand, change `version` and `sha256` in `Casks/hushboard.rb` and run `brew audit --cask --strict --online tekcify/tap/hushboard` before pushing.
+
 ## The update-signing key
 
 Every update file is signed with Hushboard's update key; the app refuses updates the key didn't sign. Its **public** half is in `src-tauri/tauri.conf.json` (`plugins.updater.pubkey`). The **private** half is:

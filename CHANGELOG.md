@@ -12,6 +12,7 @@ All notable changes to Hushboard are recorded here. The format follows [Keep a C
 - A soft launch sound, with a "Launch sound" switch in the panel. It stays quiet when Hushboard starts at login.
 - An Island section in the panel to set the island's width, corner radius and size, with a live preview while you adjust it. On Windows and Linux it styles the pill and the card.
 - Smoother state changes in the panel, the island and the lock screen.
+- Homebrew for macOS: `brew install --cask tekcify/tap/hushboard`. Uninstalling the cask removes the keyboard helper too.
 
 ### Fixed
 
