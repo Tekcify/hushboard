@@ -13,7 +13,7 @@
 //! only creates, places, sizes and shows them.
 
 use crate::Phase;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Mutex;
 use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
@@ -34,6 +34,11 @@ pub fn uses_panel() -> bool {
 static TRAY_RECT: Mutex<Option<(f64, f64, f64, f64)>> = Mutex::new(None);
 /// macOS: the main screen has a camera notch.
 static HAS_NOTCH: AtomicBool = AtomicBool::new(false);
+/// How long the panel's close animation gets before the window hides (app.css: 130 ms + slack).
+const PANEL_CLOSE_MS: u64 = 150;
+/// Bumped on every open and close, so a pending hide knows whether it's been overtaken.
+static PANEL_GEN: AtomicU64 = AtomicU64::new(0);
+static PANEL_CLOSING: AtomicBool = AtomicBool::new(false);
 
 // ---------------------------------------------------------------------------------------------
 // Tray
@@ -129,10 +134,10 @@ pub fn create_main_window(app: &AppHandle) -> tauri::Result<()> {
             .visible(false)
             .build()?;
         // A tray panel closes when you click anywhere else.
-        let w = window.clone();
+        let handle = app.clone();
         window.on_window_event(move |event| {
             if let tauri::WindowEvent::Focused(false) = event {
-                let _ = w.hide();
+                hide_panel(&handle);
             }
         });
     } else {
@@ -190,7 +195,8 @@ fn place_panel(app: &AppHandle, window: &WebviewWindow) {
             let icon_x = tx + tw / 2.0;
             let x = (icon_x - pw / 2.0).clamp(ax + margin, ax + aw - pw - margin);
             let at_top = ty < ay + ah / 2.0;
-            // The window's top 10 px is the shadow margin: the caret sits there, touching the icon.
+            // On macOS the window's top 16 px hold the pointer (2 px gap + 14 px pointer), so it
+            // starts right under the menu bar; elsewhere that space is the shadow margin.
             let y = if at_top { ty + th } else { ty - ph };
             let caret = (at_top && cfg!(target_os = "macos")).then_some((icon_x - x) / scale);
             (x, y, caret)
@@ -205,22 +211,43 @@ fn place_panel(app: &AppHandle, window: &WebviewWindow) {
 pub fn show_panel(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         if uses_panel() {
+            // Cancel a close that's still animating.
+            PANEL_GEN.fetch_add(1, Ordering::SeqCst);
+            PANEL_CLOSING.store(false, Ordering::SeqCst);
             place_panel(app, &window);
         }
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
-    }
-}
-
-pub fn hide_panel(app: &AppHandle) {
-    if uses_panel() {
-        if let Some(window) = app.get_webview_window("main") {
-            let _ = window.hide();
+        if uses_panel() {
+            let _ = app.emit_to("main", "panel-open", ());
         }
     }
 }
 
+/// Close the tray panel: the page plays its close animation, then the window hides. Opening it
+/// again before then cancels the hide.
+pub fn hide_panel(app: &AppHandle) {
+    if !uses_panel() {
+        return;
+    }
+    let Some(window) = app.get_webview_window("main") else { return };
+    if !window.is_visible().unwrap_or(false) || PANEL_CLOSING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    let generation = PANEL_GEN.fetch_add(1, Ordering::SeqCst) + 1;
+    let _ = app.emit_to("main", "panel-closing", ());
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(PANEL_CLOSE_MS));
+        if PANEL_GEN.load(Ordering::SeqCst) == generation {
+            let _ = window.hide();
+            PANEL_CLOSING.store(false, Ordering::SeqCst);
+        }
+    });
+}
+
+/// Clicking the tray icon while the panel is open (or still closing, because that click took
+/// focus from it) closes it; otherwise it opens.
 fn toggle_panel(app: &AppHandle) {
     let visible = app
         .get_webview_window("main")
