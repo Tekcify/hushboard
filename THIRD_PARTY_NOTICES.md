@@ -16,6 +16,7 @@ Hushboard is MIT licensed (see [LICENSE](LICENSE)). It includes or builds on the
 | Bricolage Grotesque | `@fontsource-variable/bricolage-grotesque` | SIL Open Font License 1.1 |
 | Instrument Sans | `@fontsource-variable/instrument-sans` | SIL Open Font License 1.1 |
 | JetBrains Mono | `@fontsource/jetbrains-mono` | SIL Open Font License 1.1 |
+| Onest | `@fontsource-variable/onest` | SIL Open Font License 1.1 |
 | Tauri and the Rust and npm dependencies in `Cargo.lock` and `package-lock.json` | various | MIT and/or Apache-2.0 (see each package) |
 
 ## Design references

@@ -4,6 +4,23 @@ All notable changes to Hushboard are recorded here. The format follows [Keep a C
 
 ## [Unreleased]
 
+## [0.1.0-beta.2] - 2026-11-13
+
+A redesigned menu bar panel.
+
+### Changed
+
+- The macOS panel sits on the system's frosted popover material, with the native window shadow and a native fade on open and close, and the pointer under the menu bar icon is part of the frosted shape.
+- New look: the Clay and sand palette, one font throughout the panel (Onest), grouped rows, small switches and shorter wording everywhere.
+- The Lock button is a keycap, and every icon in the app is now from Nucleo's free Glass set.
+- The panel fits your screen instead of stopping at a fixed height. Only its middle scrolls, inside its frame, and the panel no longer bounces past its edges.
+
+### Fixed
+
+- Locking was blocked on a fresh install whose keyboard helper was fully set up, because the Lock button also asked for the app's own permissions.
+- "Check for updates" showed an error before the first release was published; it now says Hushboard is up to date.
+- The panel's content could start out of line with its frame when it opened at launch.
+
 ## [0.1.0-beta.1] - 2026-11-12
 
 First public beta.
