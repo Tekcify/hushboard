@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/cover.jpg" alt="Hushboard: lock your keyboard while you clean it" width="100%">
+  <img src="docs/images/cover-minimal.jpg" alt="Hushboard: a little pause, a cleaner keyboard. For macOS, Windows and Linux." width="100%">
 </p>
 
 <p align="center">
