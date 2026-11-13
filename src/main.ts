@@ -461,6 +461,19 @@ function lockBlockedReason(): string | null {
   if (!perms) return "Checking what this Mac allows…";
   if (perms.helper === "needs-approval") return "Switch on Hushboard Keyboard Helper in Input Monitoring to lock";
   if (perms.helper === "outdated") return "Update the keyboard helper to lock";
+  // With the macOS helper ready, the helper does the locking: the app's own Accessibility and
+  // Input Monitoring (and secure keyboard entry) only matter to the no-helper fallback. Gating
+  // on them here blocked a fresh install whose helper was fully set up.
+  if (perms.helper !== "ready") {
+    const blocked = fallbackBlockedReason(perms);
+    if (blocked) return blocked;
+  }
+  if (!keyboards.some((k) => k.kind === "all") && selectedIds().length === 0) return "Choose at least one keyboard to lock";
+  return null;
+}
+
+/** What stops the lock when there's no helper doing it (Windows, Linux, macOS fallback). */
+function fallbackBlockedReason(perms: Permissions): string | null {
   if (perms.secureInputHolder)
     return perms.secureInputHolder === "loginwindow"
       ? "macOS is stuck in secure keyboard entry"
@@ -469,7 +482,6 @@ function lockBlockedReason(): string | null {
     return "Allow Accessibility and Input Monitoring to lock";
   if (perms.inputDevices === "denied") return "Hushboard needs access to input devices to lock";
   if (!perms.allGranted) return "A permission is missing";
-  if (!keyboards.some((k) => k.kind === "all") && selectedIds().length === 0) return "Choose at least one keyboard to lock";
   return null;
 }
 
