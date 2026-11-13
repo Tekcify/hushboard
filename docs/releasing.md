@@ -64,9 +64,36 @@ npx tauri signer generate -w ~/.tauri/hushboard-updater.key
 
 Put the contents of `~/.tauri/hushboard-updater.key` in the `TAURI_SIGNING_PRIVATE_KEY` secret and the `.pub` contents in `tauri.conf.json`.
 
-## Code signing (planned)
+## Code signing
 
-Beta builds are ad-hoc signed on macOS and unsigned on Windows, so users see a first-launch warning ([docs/installing.md](installing.md) explains it). To sign:
+### macOS (Tekcify Developer ID)
 
-- **macOS:** an Apple Developer ID Application certificate and notarisation. Add `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD` and `APPLE_TEAM_ID` secrets, pass them to `tauri-action`, and remove `"signingIdentity": "-"` from `tauri.conf.json`. Set `HUSHBOARD_SIGN_IDENTITY` so the keyboard helper is signed with the same identity.
-- **Windows:** SignPath (free for open source) or Azure Trusted Signing, configured through `bundle.windows.signCommand`.
+`tauri.conf.json` keeps `"signingIdentity": "-"` so contributors and CI build ad-hoc. Signed builds use Tekcify's certificate, `Developer ID Application: TEKCIFY TECHNOLOGIES LTD (44969WH79Y)`, which must be in the login keychain.
+
+Build a signed universal app and DMG locally:
+
+```bash
+./scripts/build-macos-signed.sh
+```
+
+To notarize as well, store notary credentials for the Tekcify team once (Apple ID with an app-specific password, or an App Store Connect API key):
+
+```bash
+xcrun notarytool store-credentials hushboard --team-id 44969WH79Y
+```
+
+Then run the script with the profile name. It submits the DMG, waits, staples the DMG and the app, and checks both with Gatekeeper:
+
+```bash
+HUSHBOARD_NOTARY_PROFILE=hushboard ./scripts/build-macos-signed.sh
+```
+
+Set `TAURI_SIGNING_PRIVATE_KEY` (and its password) first if you also want the updater files.
+
+The keyboard helper is signed on the user's Mac when the app installs it, not at build time, so it stays ad-hoc signed until the app ships a pre-signed helper.
+
+For signed CI builds, add `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_API_ISSUER`, `APPLE_API_KEY` and `APPLE_API_KEY_PATH` (or `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`) secrets and pass them to `tauri-action` on the macOS job only.
+
+### Windows
+
+Not signed yet. SignPath (free for open source) or Azure Trusted Signing, configured through `bundle.windows.signCommand`.
