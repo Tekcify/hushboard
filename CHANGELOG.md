@@ -4,9 +4,9 @@ All notable changes to Hushboard are recorded here. The format follows [Keep a C
 
 ## [Unreleased]
 
-## [0.1.0-beta.2] - 2026-11-13
+## [1.0.0] - 2026-11-13
 
-A redesigned menu bar panel.
+The first stable release, with a redesigned menu bar panel. Installed betas update to it on their own.
 
 ### Changed
 
