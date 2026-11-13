@@ -123,4 +123,4 @@ Bug reports, testing on your own hardware (Windows and Linux especially), code a
 
 ## License
 
-[MIT](LICENSE) © Tekcify and the Hushboard contributors.
+[MIT](LICENSE) © Tekcify and the Hushboard contributors. The icons and fonts keep their own licenses, listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
