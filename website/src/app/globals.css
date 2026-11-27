@@ -164,6 +164,43 @@ body {
   transform: rotate(8deg);
 }
 
+/* How it works, step 3: the cloth crosses the keys in 3.2s, lifts off, and starts again.
+   Each key lights as the cloth's middle passes it (its delay is set inline). */
+.wipe-cloth {
+  width: 28%;
+  height: 84%;
+  animation: wipe-cloth 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+@keyframes wipe-cloth {
+  0% { left: -14%; opacity: 0; transform: rotate(-4deg); }
+  6% { opacity: 1; }
+  40% { transform: rotate(3deg); }
+  80% { left: 86%; opacity: 1; transform: rotate(-2deg); }
+  92%, 100% { left: 96%; opacity: 0; transform: rotate(-2deg); }
+}
+
+.wipe-key {
+  animation: wipe-key 4s linear infinite;
+}
+
+@keyframes wipe-key {
+  0% {
+    background: var(--seal);
+    border-color: var(--seal-strong);
+    color: var(--on-seal);
+    transform: translateY(0.4cqw);
+    box-shadow: 0 0 2.4cqw #f08a5d80, 0 0.1cqw var(--key-edge);
+  }
+  14%, 100% {
+    background: linear-gradient(160deg, #332a23, var(--key-face) 60%);
+    border-color: #3a3029;
+    color: #cbbcad;
+    transform: none;
+    box-shadow: inset 0 1px #ffffff14, 0 0.5cqw var(--key-edge);
+  }
+}
+
 .island-letter {
   animation: letter-in 0.5s ease-out both;
 }
@@ -189,8 +226,13 @@ body {
     scroll-behavior: auto;
   }
   .island-letter,
-  .hold-fill {
+  .hold-fill,
+  .wipe-key {
     animation: none;
+  }
+  .wipe-cloth {
+    animation: none;
+    left: 40%;
   }
   /* FAQ rows stop moving and scroll by hand instead. */
   .scroller-track {

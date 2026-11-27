@@ -2,6 +2,7 @@ import { links } from "@/content/site";
 import CursorGrid from "./CursorGrid/CursorGrid";
 import { DownloadButtons } from "./DownloadButtons";
 import { KeyboardScene } from "./KeyboardScene";
+import { OsIcon } from "./OsIcon";
 
 export function Hero() {
   return (
@@ -18,10 +19,10 @@ export function Hero() {
           radius={140}
           holdTime={400}
           fadeDuration={800}
-          fillOpacity={0.06}
-          maxOpacity={0.8}
+          fillOpacity={0.035}
+          maxOpacity={0.4}
           gridOpacity={0.04}
-          spotlight={0.5}
+          spotlight={0.3}
           edgeFade={0}
           clickPulse
         />
@@ -33,7 +34,13 @@ export function Hero() {
           className="mb-7 inline-flex items-center gap-2 rounded-full border border-line bg-surface-raised/70 py-1 pl-1 pr-3 text-xs text-ink-muted transition-colors hover:text-ink"
         >
           <span className="rounded-full bg-suds px-2 py-0.5 font-semibold text-on-suds">Free</span>
-          Open source, for macOS, Windows and Linux
+          Open source, for
+          <span className="flex items-center gap-1.5 text-ink">
+            <OsIcon platform="mac" size={13} />
+            <OsIcon platform="windows" size={11} />
+            <OsIcon platform="linux" size={13} />
+          </span>
+          <span className="sr-only">macOS, Windows and Linux</span>
         </a>
         <h1 className="text-[clamp(2.7rem,7.4vw,5.6rem)] font-semibold leading-[0.98] tracking-[-0.055em] text-balance">
           A little pause.
