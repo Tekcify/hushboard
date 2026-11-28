@@ -1,40 +1,62 @@
-// SAMPLE QUOTES. These are written by us to fill the design and are not from real users.
-// Replace each one with a real quote (and the person's okay) and set `placeholder: false`.
-// Cards with `placeholder: true` show a "Sample" tag so they can't pass for real reviews.
-export type Testimonial = {
-  quote: string;
-  name: string;
-  role: string;
-  placeholder: boolean;
+// Everyday moments Hushboard is made for. These describe situations, not people: there are no
+// names or quotes here because nobody has sent us feedback yet. When real quotes arrive (with
+// the person's okay), they can sit alongside these or replace them.
+// Every detail below matches what the app does today; see the README before adding new claims.
+
+export type MomentIcon = "lunch" | "call" | "cat" | "spill" | "laptop" | "kids";
+
+export type Moment = {
+  id: string;
+  icon: MomentIcon;
+  /** The situation, shown as the card's title. */
+  title: string;
+  /** What Hushboard does for you in that moment. */
+  body: string;
+  /** The lock setting that fits, shown as a small tag. */
+  setting: string;
 };
 
-export const testimonials: Testimonial[] = [
+export const moments: Moment[] = [
   {
-    quote:
-      "I used to shut the lid to clean my MacBook and then wait for it to wake up again. Now I press Lock, wipe it, and I'm back in under a minute.",
-    name: "Name goes here",
-    role: "Role goes here",
-    placeholder: true,
+    id: "lunch",
+    icon: "lunch",
+    title: "Lunch at your desk",
+    body: "Crumbs end up between the keys. Lock for a minute and wipe them out, and nothing gets typed into the document you left open.",
+    setting: "1 min lock",
   },
   {
-    quote:
-      "Seeing each key show up on screen while I cleaned is what sold me. I knew nothing was going into the Slack message I had open.",
-    name: "Name goes here",
-    role: "Role goes here",
-    placeholder: true,
+    id: "call",
+    icon: "call",
+    title: "Right before a call",
+    body: "Give the keys a wipe while the meeting loads. Your pointer keeps working, so you can still click Join the second it's ready.",
+    setting: "30 s lock",
   },
   {
-    quote:
-      "Ctrl+Alt+U is easy to remember, so I never worried about getting stuck with a dead keyboard.",
-    name: "Name goes here",
-    role: "Role goes here",
-    placeholder: true,
+    id: "cat",
+    icon: "cat",
+    title: "A cat on the keyboard",
+    body: "Lock it until you unlock it yourself and let the cat walk across. Every key it presses shows up on screen and goes nowhere.",
+    setting: "Until I unlock",
   },
   {
-    quote:
-      "My cat sleeps on my keyboard. I set it to stay locked until I unlock it, and now she can stay there as long as she likes.",
-    name: "Name goes here",
-    role: "Role goes here",
-    placeholder: true,
+    id: "spill",
+    icon: "spill",
+    title: "Cleaning up a spill",
+    body: "Take your time with a damp cloth. Hold to unlock stays on screen the whole time, and a timed lock ends on its own.",
+    setting: "5 min lock",
+  },
+  {
+    id: "laptop",
+    icon: "laptop",
+    title: "Laptop on a stand",
+    body: "On macOS and Linux, lock just the built-in keyboard and keep typing on the one you plugged in.",
+    setting: "Built-in only",
+  },
+  {
+    id: "kids",
+    icon: "kids",
+    title: "Little hands on the keys",
+    body: "Let them press every key they like. Nothing gets typed, deleted or sent, and the pointer stays yours.",
+    setting: "Until I unlock",
   },
 ];
