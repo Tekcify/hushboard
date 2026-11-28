@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { links } from "@/content/site";
+import { FooterWordmark } from "./FooterWordmark";
 import { Reveal } from "./Reveal";
 
 const columns = [
@@ -63,6 +64,7 @@ export function Footer() {
         <span>© 2026 Tekcify and the Hushboard contributors</span>
         <span>Made for people who eat at their desk</span>
       </div>
+      <FooterWordmark />
     </footer>
   );
 }
