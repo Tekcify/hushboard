@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { links } from "@/content/site";
 
-export function Header() {
+// `star` is the GitHub star pill, rendered on the server so its count can be cached.
+export function Header({ star }: { star: ReactNode }) {
   const [docked, setDocked] = useState(false);
 
   useEffect(() => {
@@ -32,12 +33,15 @@ export function Header() {
           <a className="transition-colors hover:text-ink" href="#faq">FAQ</a>
           <a className="transition-colors hover:text-ink" href={links.repo}>GitHub</a>
         </nav>
-        <a
-          href="#download"
-          className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-surface transition-colors hover:bg-seal-strong"
-        >
-          Download
-        </a>
+        <div className="flex items-center gap-2">
+          <span className="hidden sm:block">{star}</span>
+          <a
+            href="#download"
+            className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-surface transition-colors hover:bg-seal-strong"
+          >
+            Download
+          </a>
+        </div>
       </div>
     </header>
   );

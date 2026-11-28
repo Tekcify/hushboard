@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { links } from "@/content/site";
+import { Reveal } from "./Reveal";
 
 const columns = [
   {
@@ -34,7 +35,7 @@ export function Footer() {
   return (
     <footer className="border-t border-line">
       <div className="mx-auto grid max-w-6xl gap-12 px-5 py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
-        <div>
+        <Reveal variant="soft">
           <a href="#top" className="inline-flex items-center gap-2.5 font-semibold tracking-tight">
             <Image src="/brand.svg" alt="" width={30} height={30} />
             Hushboard
@@ -42,9 +43,9 @@ export function Footer() {
           <p className="mt-4 max-w-56 text-sm leading-relaxed text-ink-muted">
             A little pause for your keyboard while you clean it.
           </p>
-        </div>
-        {columns.map((c) => (
-          <nav key={c.title} aria-label={c.title}>
+        </Reveal>
+        {columns.map((c, i) => (
+          <Reveal as="nav" variant="soft" delay={(i + 1) * 90} key={c.title} aria-label={c.title}>
             <h3 className="text-sm font-semibold">{c.title}</h3>
             <ul className="mt-4 space-y-2.5 text-sm text-ink-muted">
               {c.items.map((i) => (
@@ -55,7 +56,7 @@ export function Footer() {
                 </li>
               ))}
             </ul>
-          </nav>
+          </Reveal>
         ))}
       </div>
       <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-3 border-t border-line px-5 py-6 text-xs text-ink-muted">

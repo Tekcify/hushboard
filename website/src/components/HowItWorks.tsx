@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { DurationArt, MenuBarArt, UnlockArt, WipeArt } from "./HowIllustrations";
+import { Reveal } from "./Reveal";
 
 type Step = { title: string; body: string; note: string; art: ReactNode };
 
@@ -62,7 +63,8 @@ export function HowItWorks() {
         // A card sinks a little for every card that has landed on top of it.
         const depth = covered.slice(i).reduce((sum, c) => sum + c, 0);
         const flap = covered[i];
-        const inner = el.firstElementChild as HTMLElement;
+        const inner = el.querySelector("article");
+        if (!inner) return;
         inner.style.transform = `scale(${1 - depth * 0.045}) rotateX(${flap * 9}deg)`;
         inner.style.filter = `brightness(${1 - Math.min(depth, 2.5) * 0.22})`;
         if (i > 0 && covered[i - 1] > 0.35) current = i;
@@ -86,7 +88,7 @@ export function HowItWorks() {
   return (
     <section id="how" aria-labelledby="how-title" className="mx-auto max-w-6xl px-5 py-16 sm:py-24">
       <div className="grid gap-10 lg:grid-cols-[300px_1fr] lg:gap-14">
-        <div className="lg:sticky lg:self-start" style={{ top: PIN_TOP }}>
+        <Reveal className="lg:sticky lg:self-start" style={{ top: PIN_TOP }}>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-seal">How it works</p>
           <h2 id="how-title" className="mt-4 text-[clamp(2rem,4.6vw,3.2rem)] font-semibold leading-[1.05] tracking-[-0.045em]">
             Lock, wipe, carry on
@@ -114,7 +116,7 @@ export function HowItWorks() {
               </li>
             ))}
           </ol>
-        </div>
+        </Reveal>
 
         <ol className="flex flex-col gap-8 pb-8 [perspective:1600px]">
           {steps.map((s, i) => (
@@ -127,6 +129,7 @@ export function HowItWorks() {
               className="sticky scroll-mt-28"
               style={{ top: PIN_TOP + i * PEEK }}
             >
+              <Reveal variant="scale">
               <article className="relative origin-top overflow-hidden rounded-[28px] border border-line bg-[linear-gradient(180deg,#241e19,var(--surface-raised)_40%)] shadow-[0_-12px_40px_#0d0b0999,inset_0_1px_#ffffff0f] will-change-transform">
                 <div className="relative grid gap-8 p-6 sm:p-9 md:grid-cols-[1fr_1.15fr] md:items-stretch">
                   <div className="flex flex-col">
@@ -144,6 +147,7 @@ export function HowItWorks() {
                   <div className="min-h-72">{s.art}</div>
                 </div>
               </article>
+              </Reveal>
             </li>
           ))}
         </ol>

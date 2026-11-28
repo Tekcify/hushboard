@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Onest } from "next/font/google";
-import "./globals.css";
+import { GyroCursor } from "@/components/GyroCursor";import "./globals.css";
 
 const onest = Onest({
   variable: "--font-onest",
@@ -24,7 +24,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${onest.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        {children}
+        <GyroCursor />
+      </body>
     </html>
   );
 }

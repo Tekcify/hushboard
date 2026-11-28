@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { Reveal } from "@/components/Reveal";
 
 // Adapted from the "habit-faq-scroller" component: typed, and restyled for Hushboard's dark palette.
 
@@ -71,27 +72,23 @@ const FaqSection = ({ data }: { data: FaqData }) => {
   return (
     <div className="relative flex w-full max-w-6xl flex-col items-center gap-12">
       <div className="z-10 flex max-w-2xl flex-col items-center gap-5 px-5 text-center">
-        <h2
-          className="text-[clamp(2rem,4.6vw,3.4rem)] font-semibold leading-tight tracking-[-0.045em] text-ink"
-          style={{ opacity: 0, animation: "fadeInUp 0.7s ease-out 0.2s forwards" }}
-        >
+        <Reveal as="h2" className="text-[clamp(2rem,4.6vw,3.4rem)] font-semibold leading-tight tracking-[-0.045em] text-ink">
           {data.mainTitle}
-        </h2>
-        <p
-          className="text-lg text-ink-muted"
-          style={{ opacity: 0, animation: "fadeInUp 0.7s ease-out 0.4s forwards" }}
-        >
+        </Reveal>
+        <Reveal as="p" variant="soft" delay={120} className="text-lg text-ink-muted">
           {data.mainSubtitle}
-        </p>
+        </Reveal>
       </div>
 
       <div className="z-10 flex w-full flex-col gap-6">
-        {data.rows.map((row) => (
-          <HorizontalScroller key={row.id} speed={row.speed} direction={row.direction}>
-            {row.faqItems.map((item) => (
-              <FaqCard key={item.id} question={item.question} answer={item.answer} />
-            ))}
-          </HorizontalScroller>
+        {data.rows.map((row, i) => (
+          <Reveal key={row.id} delay={i * 110}>
+            <HorizontalScroller speed={row.speed} direction={row.direction}>
+              {row.faqItems.map((item) => (
+                <FaqCard key={item.id} question={item.question} answer={item.answer} />
+              ))}
+            </HorizontalScroller>
+          </Reveal>
         ))}
       </div>
     </div>

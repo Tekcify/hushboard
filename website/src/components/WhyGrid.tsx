@@ -1,3 +1,5 @@
+import { Reveal } from "./Reveal";
+
 const reasons: { title: string; body: string; soon?: boolean }[] = [
   {
     title: "Your pointer stays free",
@@ -36,11 +38,11 @@ const reasons: { title: string; body: string; soon?: boolean }[] = [
 
 export function WhyGrid() {
   return (
-    <section aria-labelledby="why-title" className="mx-auto max-w-6xl px-5 py-16 sm:py-24">
-      <h2 id="why-title" className="text-center text-[clamp(2rem,4.6vw,3.4rem)] font-semibold tracking-[-0.045em]">
+    <section id="features" aria-labelledby="why-title" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16 sm:py-24">
+      <Reveal as="h2" id="why-title" className="text-center text-[clamp(2rem,4.6vw,3.4rem)] font-semibold tracking-[-0.045em]">
         Why Hushboard
-      </h2>
-      <ul className="mt-12 grid gap-px overflow-hidden rounded-[28px] border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+      </Reveal>
+      <Reveal as="ul" variant="scale" delay={120} className="mt-12 grid gap-px overflow-hidden rounded-[28px] border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
         {reasons.map((r) => (
           <li key={r.title} className="bg-surface p-7 transition-colors hover:bg-surface-raised">
             <h3 className="flex flex-wrap items-center gap-2 font-semibold tracking-tight">
@@ -54,7 +56,7 @@ export function WhyGrid() {
             <p className="mt-2 text-sm leading-relaxed text-ink-muted">{r.body}</p>
           </li>
         ))}
-      </ul>
+      </Reveal>
     </section>
   );
 }

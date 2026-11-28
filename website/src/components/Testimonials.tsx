@@ -1,15 +1,19 @@
 import { testimonials } from "@/content/testimonials";
+import { Reveal } from "./Reveal";
 
 export function Testimonials() {
   return (
     <section aria-labelledby="testimonials-title" className="mx-auto max-w-6xl px-5 py-16 sm:py-24">
-      <h2 id="testimonials-title" className="text-center text-[clamp(2rem,4.6vw,3.4rem)] font-semibold tracking-[-0.045em]">
+      <Reveal as="h2" id="testimonials-title" className="text-center text-[clamp(2rem,4.6vw,3.4rem)] font-semibold tracking-[-0.045em]">
         What people say
-      </h2>
+      </Reveal>
       <div className="mt-12 grid gap-4 md:grid-cols-2">
         {testimonials.map((t, i) => (
-          <figure
+          <Reveal
+            as="figure"
             key={i}
+            variant="scale"
+            delay={i * 110}
             className="relative flex flex-col justify-between gap-8 rounded-3xl border border-line bg-surface-raised p-7 sm:p-9"
           >
             <blockquote className="text-[1.08rem] leading-relaxed text-pretty">
@@ -31,7 +35,7 @@ export function Testimonials() {
                 </span>
               )}
             </figcaption>
-          </figure>
+          </Reveal>
         ))}
       </div>
     </section>

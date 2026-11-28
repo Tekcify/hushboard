@@ -1,12 +1,12 @@
+import type { CSSProperties } from "react";
 import { links } from "@/content/site";
 import CursorGrid from "./CursorGrid/CursorGrid";
 import { DownloadButtons } from "./DownloadButtons";
 import { KeyboardScene } from "./KeyboardScene";
 import { OsIcon } from "./OsIcon";
-
 export function Hero() {
   return (
-    <section id="top" className="relative isolate overflow-hidden pt-32 sm:pt-40">
+    <section id="top" className="relative isolate overflow-clip pt-32 sm:pt-40">
       {/* Clay cells light up around the pointer; the grid itself listens on the window,
           so the copy and the scene on top don't block it. */}
       <div aria-hidden className="absolute inset-0 -z-10">
@@ -31,7 +31,8 @@ export function Hero() {
       <div className="relative mx-auto max-w-4xl px-5 text-center">
         <a
           href={links.repo}
-          className="mb-7 inline-flex items-center gap-2 rounded-full border border-line bg-surface-raised/70 py-1 pl-1 pr-3 text-xs text-ink-muted transition-colors hover:text-ink"
+          className="hero-rise mb-7 inline-flex items-center gap-2 rounded-full border border-line bg-surface-raised/70 py-1 pl-1 pr-3 text-xs text-ink-muted transition-colors hover:text-ink"
+          style={{ "--d": "100ms" } as CSSProperties}
         >
           <span className="rounded-full bg-suds px-2 py-0.5 font-semibold text-on-suds">Free</span>
           Open source, for
@@ -43,19 +44,26 @@ export function Hero() {
           <span className="sr-only">macOS, Windows and Linux</span>
         </a>
         <h1 className="text-[clamp(2.7rem,7.4vw,5.6rem)] font-semibold leading-[0.98] tracking-[-0.055em] text-balance">
-          A little pause.
+          <span className="hero-rise inline-block" style={{ "--d": "200ms" } as CSSProperties}>
+            A little pause.
+          </span>
           <br />
-          <span className="text-seal">A cleaner keyboard.</span>
+          <span className="hero-rise inline-block text-seal" style={{ "--d": "340ms" } as CSSProperties}>
+            A cleaner keyboard.
+          </span>
         </h1>
-        <p className="mx-auto mt-6 max-w-xl text-[clamp(1rem,1.8vw,1.2rem)] leading-relaxed text-ink-muted text-pretty">
+        <p
+          className="hero-rise mx-auto mt-6 max-w-xl text-[clamp(1rem,1.8vw,1.2rem)] leading-relaxed text-ink-muted text-pretty"
+          style={{ "--d": "480ms" } as CSSProperties}
+        >
           Lock your keyboard while you wipe it down. Your mouse keeps working, and the way out is
           always on screen.
         </p>
-        <div className="mt-9 flex justify-center">
-          <DownloadButtons compact />
+        <div className="hero-rise relative z-20 mt-9 flex justify-center" style={{ "--d": "600ms" } as CSSProperties}>
+          <DownloadButtons />
         </div>
       </div>
-      <div className="relative mt-16 px-4 sm:mt-20 sm:px-6">
+      <div className="hero-rise-scale relative mt-16 px-4 sm:mt-20 sm:px-6" style={{ "--d": "750ms" } as CSSProperties}>
         <KeyboardScene />
       </div>
     </section>

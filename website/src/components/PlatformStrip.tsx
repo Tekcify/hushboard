@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { brewCommand } from "@/content/site";
 import { CopyCommand } from "./CopyCommand";
 import { OsIcon } from "./OsIcon";
+import { Reveal } from "./Reveal";
 
 function LicenseIcon({ size }: { size: number }) {
   // A balance scale, the usual mark for a license.
@@ -24,8 +25,15 @@ const items: { name: string; note: string; icon: ReactNode }[] = [
 export function PlatformStrip() {
   return (
     <section aria-label="Platforms" className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
-      <p className="text-center text-sm text-ink-muted">Runs where you work</p>
-      <ul className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-4">
+      <Reveal as="p" variant="soft" className="text-center text-sm text-ink-muted">
+        Runs where you work
+      </Reveal>
+      <Reveal
+        as="ul"
+        variant="scale"
+        delay={120}
+        className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-4"
+      >
         {items.map((item) => (
           <li key={item.name} className="group flex flex-col items-center gap-1 bg-surface px-4 py-7 text-center">
             <span className="mb-3 grid h-7 place-items-center text-ink-muted transition-colors group-hover:text-seal">{item.icon}</span>
@@ -33,10 +41,10 @@ export function PlatformStrip() {
             <span className="text-xs text-ink-muted">{item.note}</span>
           </li>
         ))}
-      </ul>
-      <div className="mt-6 flex justify-center">
+      </Reveal>
+      <Reveal variant="soft" delay={300} className="mt-6 flex justify-center">
         <CopyCommand command={brewCommand} />
-      </div>
+      </Reveal>
     </section>
   );
 }
